@@ -1,0 +1,32 @@
+{
+  "name": "cozmic-wallpapers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An AI wallpaper generator app for mobile devices that specializes in generating outer-space-related images. This includes celestial bodies such as stars, galaxies, planets, and constellations. There are important instructions that the designated coding agent must follow written below.",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thisIsMatthewZhang/cozmic-wallpapers.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "expo": "~55.0.0",
+    "react": "19.2.0",
+    "react-native": "0.83.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.3"
+  },
+  "bugs": {
+    "url": "https://github.com/thisIsMatthewZhang/cozmic-wallpapers/issues"
+  },
+  "homepage": "https://github.com/thisIsMatthewZhang/cozmic-wallpapers#readme"
+}
