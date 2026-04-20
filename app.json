@@ -2,7 +2,9 @@
   "expo": {
     "name": "Cozmic Wallpapers",
     "slug": "cozmic-wallpapers",
-        "ios": {
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "app.wallpapers.cozmic",

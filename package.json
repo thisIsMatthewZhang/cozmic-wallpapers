@@ -18,10 +18,12 @@
   "license": "ISC",
   "dependencies": {
     "expo": "~55.0.0",
+    "expo-dev-client": "~55.0.27",
     "react": "19.2.0",
     "react-native": "0.83.0"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "@types/react": "~19.2.2",
     "typescript": "~5.9.3"
   },
