@@ -11,7 +11,7 @@ type WallpaperCardProps = {
 export function WallpaperCard({
   item,
   compact = false,
-}: WallpaperCardProps) {
+}: Readonly<WallpaperCardProps>) {
   return (
     <View
       style={[
@@ -20,6 +20,7 @@ export function WallpaperCard({
         { backgroundColor: item.colors[0] },
       ]}
     >
+      <View style={styles.starCluster} />
       <View
         style={[
           styles.gradientBlob,
@@ -61,6 +62,18 @@ const styles = StyleSheet.create({
     opacity: 0.45,
     borderWidth: 1,
   },
+  starCluster: {
+    position: "absolute",
+    top: 18,
+    left: 8,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "rgba(248, 251, 255, 0.08)",
+    opacity: 0.9,
+    transform: [{ scaleX: 1.6 }, { rotate: "-26deg" }],
+  },
   planet: {
     position: "absolute",
     width: 66,
@@ -72,6 +85,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     gap: 6,
+    paddingRight: 8,
   },
   title: {
     color: colors.white,

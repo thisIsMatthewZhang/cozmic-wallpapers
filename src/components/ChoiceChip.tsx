@@ -14,7 +14,7 @@ export function ChoiceChip({
   selected = false,
   onPress,
   accent = colors.cyan,
-}: ChoiceChipProps) {
+}: Readonly<ChoiceChipProps>) {
   return (
     <Pressable
       onPress={onPress}
@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
   chip: {
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderColor: colors.lineStrong,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -47,6 +47,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
 });

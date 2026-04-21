@@ -12,7 +12,7 @@ export function SectionHeader({
   eyebrow,
   title,
   description,
-}: SectionHeaderProps) {
+}: Readonly<SectionHeaderProps>) {
   return (
     <View style={styles.container}>
       {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
@@ -24,7 +24,7 @@ export function SectionHeader({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 6,
+    gap: 7,
   },
   eyebrow: {
     color: colors.cyan,
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.white,
     fontSize: typography.section,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   description: {
     color: colors.mist,
