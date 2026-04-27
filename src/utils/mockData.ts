@@ -1,5 +1,6 @@
 import type {
   AspectRatioOption,
+  CreditPlan,
   GeneratorPreset,
   WallpaperPreview,
   WallpaperStyle,
@@ -72,4 +73,53 @@ export const promptIdeas = [
   "Dense galaxy bloom with fine stardust and a single radiant core",
   "Minimal moonscape with teal eclipse light and negative space",
   "Retro-futurist ringed planet drifting through coral and gold gas clouds",
+];
+
+export const creditPlans: CreditPlan[] = [
+  {
+    id: "starter",
+    name: "Starter Orbit",
+    price: "$4.99",
+    credits: 60,
+    downloads: 12,
+    generationRuns: 15,
+    description: "A light pack for trying new prompts and saving a few favorites.",
+    accent: "#72E4FF",
+    features: [
+      "4 credits per generation run",
+      "5 credits per final download",
+      "Standard queue priority",
+    ],
+  },
+  {
+    id: "creator",
+    name: "Creator Flight",
+    price: "$9.99",
+    credits: 150,
+    downloads: 30,
+    generationRuns: 37,
+    description: "A balanced pack for weekly wallpaper creation and remixing.",
+    badge: "Best value",
+    accent: "#FFD166",
+    features: [
+      "Enough for several prompt sessions",
+      "Includes 4K wallpaper exports",
+      "Priority generation window",
+    ],
+  },
+  {
+    id: "studio",
+    name: "Studio Galaxy",
+    price: "$19.99",
+    credits: 360,
+    downloads: 72,
+    generationRuns: 90,
+    description: "A deeper credit bank for collectors and visual experiments.",
+    accent: "#FF8C7A",
+    features: [
+      "Best for batches and collections",
+      "Higher monthly download room",
+      "Early access to premium styles",
+    ],
+  },
 ];

@@ -22,8 +22,12 @@ import {
   recentGenerations,
   styles,
 } from "../utils/mockData";
+import { DownloadPlansScreen } from "./DownloadPlansScreen";
+
+type ActiveScreen = "create" | "plans";
 
 export function AuthenticatedHome() {
+  const [activeScreen, setActiveScreen] = useState<ActiveScreen>("create");
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(styles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
@@ -41,135 +45,159 @@ export function AuthenticatedHome() {
             <Text style={localStyles.welcomeLabel}>Welcome back</Text>
             <Text style={localStyles.welcomeValue}>{displayName}</Text>
           </View>
-          <Pressable onPress={signOutUser} style={localStyles.signOutButton}>
-            <Text style={localStyles.signOutLabel}>Sign out</Text>
-          </Pressable>
+          <View style={localStyles.topActions}>
+            <Pressable
+              onPress={() => setActiveScreen("plans")}
+              style={[
+                localStyles.topButton,
+                activeScreen === "plans" && localStyles.topButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  localStyles.topButtonLabel,
+                  activeScreen === "plans" && localStyles.topButtonLabelActive,
+                ]}
+              >
+                Plans
+              </Text>
+            </Pressable>
+            <Pressable onPress={signOutUser} style={localStyles.topButton}>
+              <Text style={localStyles.topButtonLabel}>Sign out</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={localStyles.hero}>
-          <View style={localStyles.heroCopy}>
-            <Text style={localStyles.kicker}>COZMIC WALLPAPERS</Text>
-            <Text style={localStyles.headline}>
-              Craft stellar lock screens with AI-built scenes.
-            </Text>
-            <Text style={localStyles.subheadline}>
-              Generate original planets, galaxies, and deep-space moods tuned
-              for mobile wallpaper framing.
-            </Text>
-          </View>
+        {activeScreen === "plans" ? (
+          <DownloadPlansScreen onBack={() => setActiveScreen("create")} />
+        ) : (
+          <>
+            <View style={localStyles.hero}>
+              <View style={localStyles.heroCopy}>
+                <Text style={localStyles.kicker}>COZMIC WALLPAPERS</Text>
+                <Text style={localStyles.headline}>
+                  Craft stellar lock screens with AI-built scenes.
+                </Text>
+                <Text style={localStyles.subheadline}>
+                  Generate original planets, galaxies, and deep-space moods tuned
+                  for mobile wallpaper framing.
+                </Text>
+              </View>
 
-          <View style={localStyles.statsRow}>
-            <View style={localStyles.statPill}>
-              <Text style={localStyles.statValue}>4K</Text>
-              <Text style={localStyles.statLabel}>upscale ready</Text>
+              <View style={localStyles.statsRow}>
+                <View style={localStyles.statPill}>
+                  <Text style={localStyles.statValue}>4K</Text>
+                  <Text style={localStyles.statLabel}>upscale ready</Text>
+                </View>
+                <View style={localStyles.statPill}>
+                  <Text style={localStyles.statValue}>12s</Text>
+                  <Text style={localStyles.statLabel}>average render</Text>
+                </View>
+              </View>
             </View>
-            <View style={localStyles.statPill}>
-              <Text style={localStyles.statValue}>12s</Text>
-              <Text style={localStyles.statLabel}>average render</Text>
+
+            <PromptComposer initialPrompt={suggestion} onRemix={cycleSuggestion} />
+
+            <View style={localStyles.sectionBlock}>
+              <SectionHeader
+                eyebrow="Preset Engine"
+                title="Start from a generation preset"
+                description="Each preset nudges composition, contrast, and subject scale for better wallpaper layouts."
+              />
+              <View style={localStyles.rowWrap}>
+                {presets.map((preset) => (
+                  <ChoiceChip
+                    key={preset.id}
+                    accent={preset.accent}
+                    label={preset.label}
+                    onPress={() => setSelectedPreset(preset.id)}
+                    selected={selectedPreset === preset.id}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
-        </View>
 
-        <PromptComposer initialPrompt={suggestion} onRemix={cycleSuggestion} />
-
-        <View style={localStyles.sectionBlock}>
-          <SectionHeader
-            eyebrow="Preset Engine"
-            title="Start from a generation preset"
-            description="Each preset nudges composition, contrast, and subject scale for better wallpaper layouts."
-          />
-          <View style={localStyles.rowWrap}>
-            {presets.map((preset) => (
-              <ChoiceChip
-                key={preset.id}
-                accent={preset.accent}
-                label={preset.label}
-                onPress={() => setSelectedPreset(preset.id)}
-                selected={selectedPreset === preset.id}
+            <View style={localStyles.sectionBlock}>
+              <SectionHeader
+                eyebrow="Look & Feel"
+                title="Dial in the visual style"
+                description="Keep the prompt flexible while letting the renderer lock onto a visual direction."
               />
-            ))}
-          </View>
-        </View>
+              <View style={localStyles.rowWrap}>
+                {styles.map((styleOption) => (
+                  <ChoiceChip
+                    key={styleOption.id}
+                    label={styleOption.label}
+                    onPress={() => setSelectedStyle(styleOption.id)}
+                    selected={selectedStyle === styleOption.id}
+                  />
+                ))}
+              </View>
+            </View>
 
-        <View style={localStyles.sectionBlock}>
-          <SectionHeader
-            eyebrow="Look & Feel"
-            title="Dial in the visual style"
-            description="Keep the prompt flexible while letting the renderer lock onto a visual direction."
-          />
-          <View style={localStyles.rowWrap}>
-            {styles.map((styleOption) => (
-              <ChoiceChip
-                key={styleOption.id}
-                label={styleOption.label}
-                onPress={() => setSelectedStyle(styleOption.id)}
-                selected={selectedStyle === styleOption.id}
+            <View style={localStyles.sectionBlock}>
+              <SectionHeader
+                eyebrow="Canvas"
+                title="Choose output framing"
+                description="Different crops for lock screens, story-friendly exports, and square previews."
               />
-            ))}
-          </View>
-        </View>
+              <View style={localStyles.aspectRow}>
+                {ratios.map((ratio) => {
+                  const active = selectedRatio === ratio.id;
 
-        <View style={localStyles.sectionBlock}>
-          <SectionHeader
-            eyebrow="Canvas"
-            title="Choose output framing"
-            description="Different crops for lock screens, story-friendly exports, and square previews."
-          />
-          <View style={localStyles.aspectRow}>
-            {ratios.map((ratio) => {
-              const active = selectedRatio === ratio.id;
+                  return (
+                    <Pressable
+                      key={ratio.id}
+                      onPress={() => setSelectedRatio(ratio.id)}
+                      style={[
+                        localStyles.aspectCard,
+                        active && localStyles.aspectCardActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          localStyles.aspectLabel,
+                          active && localStyles.aspectLabelActive,
+                        ]}
+                      >
+                        {ratio.label}
+                      </Text>
+                      <Text style={localStyles.aspectDescription}>
+                        {ratio.description}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
 
-              return (
-                <Pressable
-                  key={ratio.id}
-                  onPress={() => setSelectedRatio(ratio.id)}
-                  style={[
-                    localStyles.aspectCard,
-                    active && localStyles.aspectCardActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      localStyles.aspectLabel,
-                      active && localStyles.aspectLabelActive,
-                    ]}
-                  >
-                    {ratio.label}
-                  </Text>
-                  <Text style={localStyles.aspectDescription}>
-                    {ratio.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+            <View style={localStyles.sectionBlock}>
+              <SectionHeader
+                eyebrow="Featured"
+                title="Inspiration from recent cosmic moods"
+                description="A first-pass gallery to show the kind of visual directions the generator can support."
+              />
+              <View style={localStyles.cardColumn}>
+                {featuredWallpapers.map((item) => (
+                  <WallpaperCard key={item.id} item={item} />
+                ))}
+              </View>
+            </View>
 
-        <View style={localStyles.sectionBlock}>
-          <SectionHeader
-            eyebrow="Featured"
-            title="Inspiration from recent cosmic moods"
-            description="A first-pass gallery to show the kind of visual directions the generator can support."
-          />
-          <View style={localStyles.cardColumn}>
-            {featuredWallpapers.map((item) => (
-              <WallpaperCard key={item.id} item={item} />
-            ))}
-          </View>
-        </View>
-
-        <View style={localStyles.queuePanel}>
-          <SectionHeader
-            eyebrow="Queue"
-            title="Recent generations"
-            description="A preview of how history and job status could feel inside the app."
-          />
-          <View style={localStyles.cardColumn}>
-            {recentGenerations.map((item) => (
-              <WallpaperCard compact key={item.id} item={item} />
-            ))}
-          </View>
-        </View>
+            <View style={localStyles.queuePanel}>
+              <SectionHeader
+                eyebrow="Queue"
+                title="Recent generations"
+                description="A preview of how history and job status could feel inside the app."
+              />
+              <View style={localStyles.cardColumn}>
+                {recentGenerations.map((item) => (
+                  <WallpaperCard compact key={item.id} item={item} />
+                ))}
+              </View>
+            </View>
+          </>
+        )}
       </ScreenShell>
     </>
   );
@@ -183,6 +211,11 @@ const localStyles = StyleSheet.create({
     gap: 12,
     marginTop: 2,
   },
+  topActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   welcomeLabel: {
     color: colors.mist,
     fontSize: typography.caption,
@@ -195,7 +228,7 @@ const localStyles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 4,
   },
-  signOutButton: {
+  topButton: {
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.line,
@@ -203,10 +236,17 @@ const localStyles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.panelSoft,
   },
-  signOutLabel: {
+  topButtonActive: {
+    borderColor: colors.cyan,
+    backgroundColor: "rgba(114, 228, 255, 0.12)",
+  },
+  topButtonLabel: {
     color: colors.cloud,
     fontSize: 13,
     fontWeight: "700",
+  },
+  topButtonLabelActive: {
+    color: colors.cyan,
   },
   hero: {
     paddingTop: 10,

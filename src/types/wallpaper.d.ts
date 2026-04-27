@@ -22,3 +22,16 @@ export type WallpaperPreview = {
   colors: [string, string];
   accent: string;
 };
+
+export type CreditPlan = {
+  id: string;
+  name: string;
+  price: string;
+  credits: number;
+  downloads: number;
+  generationRuns: number;
+  description: string;
+  badge?: string;
+  accent: string;
+  features: string[];
+};
