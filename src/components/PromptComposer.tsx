@@ -58,6 +58,9 @@ export function PromptComposer({
         <View>
           <Text style={styles.footerLabel}>Estimated render</Text>
           <Text style={styles.footerValue}>12 sec / 4 variants</Text>
+          <Text style={styles.freeGenerationNote}>
+            Your first generation is free.
+          </Text>
         </View>
         <Pressable style={styles.generateButton}>
           <Text style={styles.generateLabel}>Generate</Text>
@@ -178,6 +181,12 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: "600",
     marginTop: 3,
+  },
+  freeGenerationNote: {
+    color: colors.success,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 5,
   },
   generateButton: {
     borderRadius: radii.pill,

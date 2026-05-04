@@ -20,7 +20,7 @@ import {
   presets,
   ratios,
   recentGenerations,
-  styles,
+  wallpaperStyles,
 } from "../utils/mockData";
 import { DownloadPlansScreen } from "./DownloadPlansScreen";
 
@@ -29,7 +29,7 @@ type ActiveScreen = "create" | "plans";
 export function AuthenticatedHome() {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>("create");
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
-  const [selectedStyle, setSelectedStyle] = useState(styles[0].id);
+  const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
   const { suggestion, cycleSuggestion } = usePromptSuggestion();
   const { user, signOutUser } = useAuth();
@@ -40,30 +40,30 @@ export function AuthenticatedHome() {
     <>
       <StatusBar barStyle="light-content" />
       <ScreenShell>
-        <View style={localStyles.topBar}>
+        <View style={styles.topBar}>
           <View>
-            <Text style={localStyles.welcomeLabel}>Welcome back</Text>
-            <Text style={localStyles.welcomeValue}>{displayName}</Text>
+            <Text style={styles.welcomeLabel}>Welcome back</Text>
+            <Text style={styles.welcomeValue}>{displayName}</Text>
           </View>
-          <View style={localStyles.topActions}>
+          <View style={styles.topActions}>
             <Pressable
               onPress={() => setActiveScreen("plans")}
               style={[
-                localStyles.topButton,
-                activeScreen === "plans" && localStyles.topButtonActive,
+                styles.topButton,
+                activeScreen === "plans" && styles.topButtonActive,
               ]}
             >
               <Text
                 style={[
-                  localStyles.topButtonLabel,
-                  activeScreen === "plans" && localStyles.topButtonLabelActive,
+                  styles.topButtonLabel,
+                  activeScreen === "plans" && styles.topButtonLabelActive,
                 ]}
               >
                 Plans
               </Text>
             </Pressable>
-            <Pressable onPress={signOutUser} style={localStyles.topButton}>
-              <Text style={localStyles.topButtonLabel}>Sign out</Text>
+            <Pressable onPress={signOutUser} style={styles.topButton}>
+              <Text style={styles.topButtonLabel}>Sign out</Text>
             </Pressable>
           </View>
         </View>
@@ -72,39 +72,45 @@ export function AuthenticatedHome() {
           <DownloadPlansScreen onBack={() => setActiveScreen("create")} />
         ) : (
           <>
-            <View style={localStyles.hero}>
-              <View style={localStyles.heroCopy}>
-                <Text style={localStyles.kicker}>COZMIC WALLPAPERS</Text>
-                <Text style={localStyles.headline}>
+            <View style={styles.hero}>
+              <View style={styles.heroCopy}>
+                <Text style={styles.kicker}>COZMIC WALLPAPERS</Text>
+                <Text style={styles.headline}>
                   Craft stellar lock screens with AI-built scenes.
                 </Text>
-                <Text style={localStyles.subheadline}>
+                <Text style={styles.subheadline}>
                   Generate original planets, galaxies, and deep-space moods tuned
                   for mobile wallpaper framing.
                 </Text>
               </View>
 
-              <View style={localStyles.statsRow}>
-                <View style={localStyles.statPill}>
-                  <Text style={localStyles.statValue}>4K</Text>
-                  <Text style={localStyles.statLabel}>upscale ready</Text>
+              <View style={styles.statsRow}>
+                <View style={[styles.statPill, styles.freeStatPill]}>
+                  <Text style={[styles.statValue, styles.freeStatValue]}>
+                    Free
+                  </Text>
+                  <Text style={styles.statLabel}>first download</Text>
                 </View>
-                <View style={localStyles.statPill}>
-                  <Text style={localStyles.statValue}>12s</Text>
-                  <Text style={localStyles.statLabel}>average render</Text>
+                <View style={styles.statPill}>
+                  <Text style={styles.statValue}>4K</Text>
+                  <Text style={styles.statLabel}>upscale ready</Text>
+                </View>
+                <View style={styles.statPill}>
+                  <Text style={styles.statValue}>12s</Text>
+                  <Text style={styles.statLabel}>average render</Text>
                 </View>
               </View>
             </View>
 
             <PromptComposer initialPrompt={suggestion} onRemix={cycleSuggestion} />
 
-            <View style={localStyles.sectionBlock}>
+            <View style={styles.sectionBlock}>
               <SectionHeader
                 eyebrow="Preset Engine"
                 title="Start from a generation preset"
                 description="Each preset nudges composition, contrast, and subject scale for better wallpaper layouts."
               />
-              <View style={localStyles.rowWrap}>
+              <View style={styles.rowWrap}>
                 {presets.map((preset) => (
                   <ChoiceChip
                     key={preset.id}
@@ -117,14 +123,14 @@ export function AuthenticatedHome() {
               </View>
             </View>
 
-            <View style={localStyles.sectionBlock}>
+            <View style={styles.sectionBlock}>
               <SectionHeader
                 eyebrow="Look & Feel"
                 title="Dial in the visual style"
                 description="Keep the prompt flexible while letting the renderer lock onto a visual direction."
               />
-              <View style={localStyles.rowWrap}>
-                {styles.map((styleOption) => (
+              <View style={styles.rowWrap}>
+                {wallpaperStyles.map((styleOption) => (
                   <ChoiceChip
                     key={styleOption.id}
                     label={styleOption.label}
@@ -135,13 +141,13 @@ export function AuthenticatedHome() {
               </View>
             </View>
 
-            <View style={localStyles.sectionBlock}>
+            <View style={styles.sectionBlock}>
               <SectionHeader
                 eyebrow="Canvas"
                 title="Choose output framing"
                 description="Different crops for lock screens, story-friendly exports, and square previews."
               />
-              <View style={localStyles.aspectRow}>
+              <View style={styles.aspectRow}>
                 {ratios.map((ratio) => {
                   const active = selectedRatio === ratio.id;
 
@@ -150,19 +156,19 @@ export function AuthenticatedHome() {
                       key={ratio.id}
                       onPress={() => setSelectedRatio(ratio.id)}
                       style={[
-                        localStyles.aspectCard,
-                        active && localStyles.aspectCardActive,
+                        styles.aspectCard,
+                        active && styles.aspectCardActive,
                       ]}
                     >
                       <Text
                         style={[
-                          localStyles.aspectLabel,
-                          active && localStyles.aspectLabelActive,
+                          styles.aspectLabel,
+                          active && styles.aspectLabelActive,
                         ]}
                       >
                         {ratio.label}
                       </Text>
-                      <Text style={localStyles.aspectDescription}>
+                      <Text style={styles.aspectDescription}>
                         {ratio.description}
                       </Text>
                     </Pressable>
@@ -171,26 +177,26 @@ export function AuthenticatedHome() {
               </View>
             </View>
 
-            <View style={localStyles.sectionBlock}>
+            <View style={styles.sectionBlock}>
               <SectionHeader
                 eyebrow="Featured"
                 title="Inspiration from recent cosmic moods"
                 description="A first-pass gallery to show the kind of visual directions the generator can support."
               />
-              <View style={localStyles.cardColumn}>
+              <View style={styles.cardColumn}>
                 {featuredWallpapers.map((item) => (
                   <WallpaperCard key={item.id} item={item} />
                 ))}
               </View>
             </View>
 
-            <View style={localStyles.queuePanel}>
+            <View style={styles.queuePanel}>
               <SectionHeader
                 eyebrow="Queue"
                 title="Recent generations"
                 description="A preview of how history and job status could feel inside the app."
               />
-              <View style={localStyles.cardColumn}>
+              <View style={styles.cardColumn}>
                 {recentGenerations.map((item) => (
                   <WallpaperCard compact key={item.id} item={item} />
                 ))}
@@ -203,7 +209,7 @@ export function AuthenticatedHome() {
   );
 }
 
-const localStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -287,15 +293,22 @@ const localStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.panelBright,
     borderRadius: radii.md,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     gap: 6,
   },
+  freeStatPill: {
+    borderColor: "rgba(126, 247, 198, 0.45)",
+    backgroundColor: "rgba(126, 247, 198, 0.1)",
+  },
   statValue: {
     color: colors.white,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
+  },
+  freeStatValue: {
+    color: colors.success,
   },
   statLabel: {
     color: colors.mist,

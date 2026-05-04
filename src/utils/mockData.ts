@@ -13,7 +13,7 @@ export const presets: GeneratorPreset[] = [
   { id: "aurora", label: "Cosmic Aurora", accent: "#8597FF" },
 ];
 
-export const styles: WallpaperStyle[] = [
+export const wallpaperStyles: WallpaperStyle[] = [
   { id: "photoreal", label: "Photoreal" },
   { id: "dreamy", label: "Dreamy" },
   { id: "minimal", label: "Minimal" },

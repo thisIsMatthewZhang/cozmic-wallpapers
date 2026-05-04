@@ -22,7 +22,8 @@ export default function CozmicApp() {
     );
   }
 
-  return user ? <AuthenticatedHome /> : <AuthScreen />;
+  // return user ? <AuthenticatedHome /> : <AuthScreen />;
+  return <AuthenticatedHome />;
 }
 
 const styles = StyleSheet.create({
