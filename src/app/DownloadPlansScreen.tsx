@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { SectionHeader } from "../components/SectionHeader";
 import { colors, radii, typography } from "../constants/theme";
@@ -6,7 +6,7 @@ import type { CreditPlan } from "../types/wallpaper";
 import { creditPlans } from "../utils/mockData";
 
 type DownloadPlansScreenProps = {
-  onBack: () => void;
+  onClose: () => void;
 };
 
 function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
@@ -56,12 +56,15 @@ function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
   );
 }
 
-export function DownloadPlansScreen({ onBack }: Readonly<DownloadPlansScreenProps>) {
+export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenProps>) {
   return (
-    <>
+    <ScrollView
+      contentContainerStyle={styles.modalContent}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.headerRow}>
-        <Pressable onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back</Text>
+        <Pressable onPress={onClose} style={styles.closeButton}>
+          <Text style={styles.closeButtonText}>Close</Text>
         </Pressable>
         <View style={styles.balancePill}>
           <Text style={styles.balanceLabel}>Dummy balance</Text>
@@ -108,18 +111,24 @@ export function DownloadPlansScreen({ onBack }: Readonly<DownloadPlansScreenProp
           Credits stay in the account balance. A generation run reserves credits first, while downloads charge only when the user saves the finished wallpaper.
         </Text>
       </View>
-    </>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContent: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 34,
+    gap: 20,
+  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
-  backButton: {
+  closeButton: {
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.lineStrong,
@@ -127,7 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.panelSoft,
   },
-  backButtonText: {
+  closeButtonText: {
     color: colors.cloud,
     fontSize: 13,
     fontWeight: "800",
