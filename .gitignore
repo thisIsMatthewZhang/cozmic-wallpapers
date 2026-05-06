@@ -1,6 +1,8 @@
 /google-services.json
 /GoogleService-Info.plist
 node_modules
+functions/lib
+functions/node_modules
 src/constants/firebaseConfig.ts
 
 .env

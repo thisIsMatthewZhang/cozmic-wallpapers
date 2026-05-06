@@ -8,7 +8,10 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "functions:build": "npm --prefix functions run build",
+    "functions:serve": "npm --prefix functions run serve",
+    "functions:deploy": "npm --prefix functions run deploy"
   },
   "repository": {
     "type": "git",
@@ -21,7 +24,6 @@
     "expo": "~55.0.0",
     "expo-dev-client": "~55.0.27",
     "firebase": "^12.12.1",
-    "firebase-admin": "^13.8.0",
     "react": "19.2.0",
     "react-native": "0.83.0",
     "react-native-safe-area-context": "~5.6.2"
