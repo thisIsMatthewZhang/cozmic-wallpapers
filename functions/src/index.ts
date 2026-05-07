@@ -11,32 +11,36 @@ export const health = onRequest({ region: "us-central1" }, (_request, response) 
 
 export const createGenerationJob = onRequest(
   { region: "us-central1", cors: false },
-  async (request, response) => {
-    if (request.method !== "POST") {
-      response.set("Allow", "POST");
-      response.status(405).json({ error: "Method not allowed." });
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.set("Allow", "POST");
+      res.status(405).json({ error: "Method not allowed." });
       return;
     }
 
     try {
-      const appCheckToken = request.header("X-Firebase-AppCheck");
-      const idToken = request.header("Authorization")?.replace("Bearer ", "");
+      const appCheckToken = req.header("X-Firebase-AppCheck");
+      const idToken = req.header("Authorization")?.replace("Bearer ", "");
 
       if (!appCheckToken || !idToken) {
-        response.status(401).json({ error: "Unauthorized." });
+        res.status(401).json({ error: "Unauthorized." });
         return;
       }
 
       await getAppCheck().verifyToken(appCheckToken);
       const user = await getAuth().verifyIdToken(idToken);
 
-      response.json({
+      res.json({
         ok: true,
         uid: user.uid,
         message: "Ready to enqueue a wallpaper generation job.",
       });
     } catch {
-      response.status(401).json({ error: "Unauthorized." });
+      res.status(401).json({ error: "Unauthorized." });
     }
   },
 );
+
+const generateWallpaper = onRequest({ region: "us-central1", cors: false }, (req, res) => {
+  
+});
