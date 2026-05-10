@@ -1,46 +1,45 @@
 import { initializeApp } from "firebase-admin/app";
 import { getAppCheck } from "firebase-admin/app-check";
 import { getAuth } from "firebase-admin/auth";
-import { onRequest } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { ai, NANO_BANANA_PRO, Model } from './gemini-client.js';
+import { GoogleGenAI, GenerateImagesConfig, GenerateContentResponse } from "@google/genai";
 
 initializeApp();
 
-export const health = onRequest({ region: "us-central1" }, (_request, response) => {
-  response.json({ ok: true });
-});
+/**
+ * 
+ * @param ai Google GenAI client for the application
+ * @param model chosen model used to fulfill request and generate response
+ * @param prompt user-provided prompt message describing the image(s)
+ * @param param3 destructured object literal with individual property defaults set for GenerateImagesParameters.config
+ * @returns 
+ */
+async function generateContent(ai: GoogleGenAI, model: Model, prompt: string, { numberOfImages = 1, includeRaiReason = true }: GenerateImagesConfig = {}) {
+  const response = await ai.models.generateImages({
+    model: model,
+    prompt: prompt,
+    config: { numberOfImages, includeRaiReason }
+  });
+  return response;
+}
 
-export const createGenerationJob = onRequest(
-  { region: "us-central1", cors: false },
-  async (req, res) => {
-    if (req.method !== "POST") {
-      res.set("Allow", "POST");
-      res.status(405).json({ error: "Method not allowed." });
-      return;
+export const startGenerationJob = onCall(
+  { region: "us-central1", enforceAppCheck: true },
+  async (req) => {
+    if (!req.auth) {
+      throw new HttpsError("unauthenticated", "Sign in required.");
     }
 
-    try {
-      const appCheckToken = req.header("X-Firebase-AppCheck");
-      const idToken = req.header("Authorization")?.replace("Bearer ", "");
-
-      if (!appCheckToken || !idToken) {
-        res.status(401).json({ error: "Unauthorized." });
-        return;
-      }
-
-      await getAppCheck().verifyToken(appCheckToken);
-      const user = await getAuth().verifyIdToken(idToken);
-
-      res.json({
-        ok: true,
-        uid: user.uid,
-        message: "Ready to enqueue a wallpaper generation job.",
-      });
-    } catch {
-      res.status(401).json({ error: "Unauthorized." });
+    const { prompt } = req.data;
+    if (typeof prompt !== "string" || !prompt.trim()) {
+      throw new HttpsError("invalid-argument", "Prompt is required.");
     }
-  },
+
+    return {
+      ok: true,
+      uid: req.auth.uid,
+      message: "Ready to enqueue a wallpaper generation job."
+    };
+  }
 );
-
-const generateWallpaper = onRequest({ region: "us-central1", cors: false }, (req, res) => {
-  
-});

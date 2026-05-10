@@ -4,7 +4,6 @@ import { ScreenShell } from "../components/ScreenShell";
 import { colors } from "../constants/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { AuthenticatedHome } from "./AuthenticatedHome";
-import { AuthScreen } from "./AuthScreen";
 
 export default function CozmicApp() {
   const { user, isBootstrapping } = useAuth();

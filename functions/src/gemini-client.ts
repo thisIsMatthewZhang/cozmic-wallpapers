@@ -5,4 +5,6 @@ export const NANO_BANANA_2 = 'gemini-3.1-flash-image-preview';
 export const NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
 export const NANO_BANANA = 'gemini-2.5-flash-image';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export type Model = typeof NANO_BANANA_2 | typeof NANO_BANANA_PRO | typeof NANO_BANANA;
+
+export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
