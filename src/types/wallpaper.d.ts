@@ -28,8 +28,6 @@ export type CreditPlan = {
   name: string;
   price: string;
   credits: number;
-  downloads: number;
-  generationRuns: number;
   description: string;
   badge?: string;
   accent: string;

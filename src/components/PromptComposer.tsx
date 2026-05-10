@@ -58,9 +58,6 @@ export function PromptComposer({
         <View>
           <Text style={styles.footerLabel}>Estimated render</Text>
           <Text style={styles.footerValue}>12 sec / 4 variants</Text>
-          <Text style={styles.freeGenerationNote}>
-            Your first generation is free.
-          </Text>
         </View>
         <Pressable style={styles.generateButton}>
           <Text style={styles.generateLabel}>Generate</Text>

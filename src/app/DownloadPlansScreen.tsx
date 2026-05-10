@@ -9,6 +9,12 @@ type DownloadPlansScreenProps = {
   onClose: () => void;
 };
 
+const resolutionCosts = [
+  { label: "1K", credits: 6 },
+  { label: "2K", credits: 8 },
+  { label: "4K", credits: 12 },
+];
+
 function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
   return (
     <View style={[styles.planCard, { borderColor: plan.accent }]}>
@@ -30,14 +36,14 @@ function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
       </View>
 
       <View style={styles.usageGrid}>
-        <View style={styles.usageTile}>
-          <Text style={styles.usageValue}>{plan.generationRuns}</Text>
-          <Text style={styles.usageLabel}>generation runs</Text>
-        </View>
-        <View style={styles.usageTile}>
-          <Text style={styles.usageValue}>{plan.downloads}</Text>
-          <Text style={styles.usageLabel}>final downloads</Text>
-        </View>
+        {resolutionCosts.map((resolution) => (
+          <View key={resolution.label} style={styles.usageTile}>
+            <Text style={styles.usageValue}>
+              {Math.floor(plan.credits / resolution.credits)}
+            </Text>
+            <Text style={styles.usageLabel}>{resolution.label} images</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.featureList}>
@@ -75,28 +81,28 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
       <View style={styles.heroPanel}>
         <View style={styles.heroOrbit} />
         <Text style={styles.kicker}>DOWNLOAD PLANS</Text>
-        <Text style={styles.headline}>Buy credits, then spend them when a wallpaper is worth keeping.</Text>
+        <Text style={styles.headline}>Buy credits, then spend them based on output resolution.</Text>
         <Text style={styles.subheadline}>
-          Credits can cover generation attempts, upscales, and final downloads. These packages are placeholder examples for the future payment flow.
+          Higher-resolution renders use more credits, while downloads stay free once the wallpaper is generated.
         </Text>
       </View>
 
       <View style={styles.explainerGrid}>
-        <View style={styles.explainerTile}>
-          <Text style={styles.explainerValue}>4</Text>
-          <Text style={styles.explainerLabel}>credits to generate variants</Text>
-        </View>
-        <View style={styles.explainerTile}>
-          <Text style={styles.explainerValue}>5</Text>
-          <Text style={styles.explainerLabel}>credits to download final art</Text>
-        </View>
+        {resolutionCosts.map((resolution) => (
+          <View key={resolution.label} style={styles.explainerTile}>
+            <Text style={styles.explainerValue}>{resolution.label}</Text>
+            <Text style={styles.explainerLabel}>
+              {resolution.credits} credits per generated image
+            </Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.sectionBlock}>
         <SectionHeader
           eyebrow="Credit Packages"
           title="Pick a pack for the way you create"
-          description="Package values are dummy data for now, but the layout is ready for product, App Store, or Stripe-backed pricing later."
+          description="New users also receive a Pod Bonus of 12 free credits during onboarding."
         />
         <View style={styles.planList}>
           {creditPlans.map((plan) => (
@@ -108,7 +114,7 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
       <View style={styles.notePanel}>
         <Text style={styles.noteTitle}>How the wallet could work</Text>
         <Text style={styles.noteText}>
-          Credits stay in the account balance. A generation run reserves credits first, while downloads charge only when the user saves the finished wallpaper.
+          Credits stay in the account balance. Each generation charges by selected resolution, and finished wallpaper downloads do not cost additional credits.
         </Text>
       </View>
     </ScrollView>
