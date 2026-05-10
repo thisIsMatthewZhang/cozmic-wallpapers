@@ -80,11 +80,9 @@ export function AuthenticatedHome() {
           </View>
 
           <View style={styles.statsRow}>
-            <View style={[styles.statPill, styles.freeStatPill]}>
-              <Text style={[styles.statValue, styles.freeStatValue]}>
-                Free
-              </Text>
-              <Text style={styles.statLabel}>first download</Text>
+            <View style={styles.statPill}>
+              <Text style={styles.statValue}>Free</Text>
+              <Text style={styles.statLabel}>downloads</Text>
             </View>
             <View style={styles.statPill}>
               <Text style={styles.statValue}>4K</Text>
@@ -300,28 +298,22 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
   },
   statPill: {
     flex: 1,
     backgroundColor: colors.panelBright,
     borderRadius: radii.md,
-    padding: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: colors.lineStrong,
     gap: 6,
-  },
-  freeStatPill: {
-    borderColor: "rgba(126, 247, 198, 0.45)",
-    backgroundColor: "rgba(126, 247, 198, 0.1)",
   },
   statValue: {
     color: colors.white,
     fontSize: 20,
     fontWeight: "800",
-  },
-  freeStatValue: {
-    color: colors.success,
   },
   statLabel: {
     color: colors.mist,
