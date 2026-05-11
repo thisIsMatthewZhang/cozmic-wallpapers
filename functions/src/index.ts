@@ -12,11 +12,11 @@ initializeApp();
 
 /**
  * 
+ * @param prompt user-provided prompt message describing the image(s)
+ * @param param2 destructured object literal with individual property defaults set for GenerateImagesParameters.config
  * @param ai Google GenAI client for the application
  * @param model chosen model used to fulfill request and generate response
- * @param prompt user-provided prompt message describing the image(s)
- * @param param3 destructured object literal with individual property defaults set for GenerateImagesParameters.config
- * @returns 
+ * @returns GenerateImagesResponse object
  */
 async function createImage(prompt: string, { numberOfImages = 1, includeRaiReason = true }: GenerateImagesConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA_2) {
   const response = await ai.models.generateImages({
@@ -24,10 +24,6 @@ async function createImage(prompt: string, { numberOfImages = 1, includeRaiReaso
     prompt: prompt,
     config: { numberOfImages, includeRaiReason }
   });
-  if (!response.generatedImages!.length || !response.generatedImages) {
-    // TODO: refund used credits if generation failed
-    throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
-  }
   return response;
 }
 
@@ -86,9 +82,19 @@ export const processGenerationJob = onDocumentCreated(
       updatedAt: FieldValue.serverTimestamp()
     });
     const response = await createImage(data.prompt);
+    if (!response.generatedImages!.length || !response.generatedImages) {
+      // TODO: refund used credits if generation failed
+      event.data?.ref.update({
+        status: 'failed',
+        updatedAt: FieldValue.serverTimestamp(),
+        errorMessage: "Image creation failed"
+      });
+      throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
+    }
     event.data?.ref.update({
       status: 'complete',
-      updatedAt: FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp(),
+      imagePath: ""
     });
   }
 );

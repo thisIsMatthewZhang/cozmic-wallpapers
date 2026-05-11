@@ -1,4 +1,4 @@
-export type GenerationJobStatus = "queued" | "processing" | "complete";
+export type GenerationJobStatus = "queued" | "processing" | "complete" | "failed";
 
 export type GenerationJob = {
   uid: string;
