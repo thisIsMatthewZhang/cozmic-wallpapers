@@ -7,4 +7,4 @@ export const NANO_BANANA = 'gemini-2.5-flash-image';
 
 export type Model = typeof NANO_BANANA_2 | typeof NANO_BANANA_PRO | typeof NANO_BANANA;
 
-export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const GENAI_CLIENT = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });

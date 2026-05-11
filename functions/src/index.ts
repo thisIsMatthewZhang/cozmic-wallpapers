@@ -3,7 +3,7 @@ import { getAppCheck } from "firebase-admin/app-check";
 import { getAuth } from "firebase-admin/auth";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
-import { ai, NANO_BANANA_PRO, Model } from './gemini-client.js';
+import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
 import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
@@ -18,12 +18,16 @@ initializeApp();
  * @param param3 destructured object literal with individual property defaults set for GenerateImagesParameters.config
  * @returns 
  */
-async function createImage(ai: GoogleGenAI, model: Model, prompt: string, { numberOfImages = 1, includeRaiReason = true }: GenerateImagesConfig = {}) {
+async function createImage(prompt: string, { numberOfImages = 1, includeRaiReason = true }: GenerateImagesConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA_2) {
   const response = await ai.models.generateImages({
     model: model,
     prompt: prompt,
     config: { numberOfImages, includeRaiReason }
   });
+  if (!response.generatedImages!.length || !response.generatedImages) {
+    // TODO: refund used credits if generation failed
+    throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
+  }
   return response;
 }
 
@@ -33,7 +37,6 @@ async function createImage(ai: GoogleGenAI, model: Model, prompt: string, { numb
  */
 export const startGenerationJob = onCall(
   { region: "us-central1", enforceAppCheck: true },
-  // TODO: provide checks for user credit balance
   async (req) => {
     if (!req.auth) {
       throw new HttpsError("unauthenticated", "Sign in required.");
@@ -54,6 +57,8 @@ export const startGenerationJob = onCall(
     const jobRef = await db.collection("generationJobs").add({
         uid: req.auth.uid,
         prompt,
+        resolution: requestedResolution,
+        creditCost: MAPPING[requestedResolution],
         status: "queued",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -65,11 +70,25 @@ export const startGenerationJob = onCall(
 
 /**
  * Listens to the addition of a new job document to generationJobs collection.
- * On trigger, 
+ * On trigger, checks the existence of a doc snapshot, updates doc's 'status' field to 'processing', then proceeds to invoke image generation
  */
 export const processGenerationJob = onDocumentCreated(
   "generationJobs/{jobId}",
   async (event) => {
-
+    const snapshot = event.data;
+    if (!snapshot) {
+      console.log("There was an issue with finding the document associated with this generation job");
+      return;
+    }
+    const data = snapshot.data();
+    event.data?.ref.update({
+      status: 'processing',
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    const response = await createImage(data.prompt);
+    event.data?.ref.update({
+      status: 'complete',
+      updatedAt: FieldValue.serverTimestamp()
+    });
   }
 );
