@@ -38,7 +38,7 @@ export const startGenerationJob = onCall(
       throw new HttpsError("unauthenticated", "Sign in required.");
     }
 
-    const { prompt } = req.data;
+    const { prompt, numberOfImages } = req.data;
     if (typeof prompt !== "string" || !prompt.trim()) {
       throw new HttpsError("invalid-argument", "Prompt is required.");
     }
@@ -54,6 +54,7 @@ export const startGenerationJob = onCall(
         uid: req.auth.uid,
         prompt,
         resolution: requestedResolution,
+        numberOfImages,
         creditCost: MAPPING[requestedResolution],
         status: "queued",
         createdAt: FieldValue.serverTimestamp(),
@@ -81,7 +82,7 @@ export const processGenerationJob = onDocumentCreated(
       status: 'processing',
       updatedAt: FieldValue.serverTimestamp()
     });
-    const response = await createImage(data.prompt);
+    const response = await createImage(data.prompt, { numberOfImages: data.numberOfImages });
     if (!response.generatedImages!.length || !response.generatedImages) {
       // TODO: refund used credits if generation failed
       event.data?.ref.update({
@@ -94,7 +95,7 @@ export const processGenerationJob = onDocumentCreated(
     event.data?.ref.update({
       status: 'complete',
       updatedAt: FieldValue.serverTimestamp(),
-      imagePath: ""
+      imagePath: "" // TODO: specify image path
     });
   }
 );
