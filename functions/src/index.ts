@@ -4,6 +4,7 @@ import { getAuth } from "firebase-admin/auth";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { ai, NANO_BANANA_PRO, Model } from './gemini-client.js';
+import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
@@ -32,6 +33,7 @@ async function createImage(ai: GoogleGenAI, model: Model, prompt: string, { numb
  */
 export const startGenerationJob = onCall(
   { region: "us-central1", enforceAppCheck: true },
+  // TODO: provide checks for user credit balance
   async (req) => {
     if (!req.auth) {
       throw new HttpsError("unauthenticated", "Sign in required.");
@@ -42,7 +44,14 @@ export const startGenerationJob = onCall(
       throw new HttpsError("invalid-argument", "Prompt is required.");
     }
 
-    const jobRef = await getFirestore().collection("generationJobs").add({
+    const db = getFirestore();
+    const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
+    const requestedResolution = req.data!.requestedResolution as keyof typeof MAPPING;
+    if (docSnapshot.data()!.creditBalance < MAPPING[requestedResolution]) {
+      throw new HttpsError("unavailable", "Not enough credits to generate image.");
+    }
+
+    const jobRef = await db.collection("generationJobs").add({
         uid: req.auth.uid,
         prompt,
         status: "queued",
