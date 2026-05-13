@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 
+import AppButton from "../components/AppButton";
 import { ChoiceChip } from "../components/ChoiceChip";
 import { PromptComposer } from "../components/PromptComposer";
 import ReusableModal from "../components/ReusableModal";
@@ -45,25 +46,32 @@ export function AuthenticatedHome() {
             <Text style={styles.welcomeValue}>{displayName}</Text>
           </View>
           <View style={styles.topActions}>
-            <Pressable
-              onPress={() => setShowPlansModal(true)}
-              style={[
+            <AppButton
+              bgColor={
+                showPlansModal
+                  ? "rgba(114, 228, 255, 0.12)"
+                  : colors.panelSoft
+              }
+              customStyle={[
                 styles.topButton,
                 showPlansModal && styles.topButtonActive,
               ]}
-            >
-              <Text
-                style={[
-                  styles.topButtonLabel,
-                  showPlansModal && styles.topButtonLabelActive,
-                ]}
-              >
-                Plans
-              </Text>
-            </Pressable>
-            <Pressable onPress={signOutUser} style={styles.topButton}>
-              <Text style={styles.topButtonLabel}>Sign out</Text>
-            </Pressable>
+              onPress={() => setShowPlansModal(true)}
+              textColor={showPlansModal ? colors.cyan : colors.cloud}
+              textStyle={[
+                styles.topButtonLabel,
+                showPlansModal && styles.topButtonLabelActive,
+              ]}
+              title="Plans"
+            />
+            <AppButton
+              bgColor={colors.panelSoft}
+              customStyle={styles.topButton}
+              onPress={signOutUser}
+              textColor={colors.cloud}
+              textStyle={styles.topButtonLabel}
+              title="Sign out"
+            />
           </View>
         </View>
 

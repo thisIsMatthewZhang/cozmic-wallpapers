@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
+import AppButton from "./AppButton";
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { initializeApp } from 'firebase/app';
+import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
 
 type PromptComposerProps = {
   initialPrompt: string;
   onRemix: () => void;
 };
+
+const app = initializeApp(firebaseConfig);
 
 export function PromptComposer({
   initialPrompt,
@@ -34,9 +39,14 @@ export function PromptComposer({
           <View style={styles.liveDot} />
           <Text style={styles.liveLabel}>Prompt Lab</Text>
         </View>
-        <Pressable onPress={onRemix} style={styles.remixButton}>
-          <Text style={styles.remixLabel}>Remix Idea</Text>
-        </Pressable>
+        <AppButton
+          bgColor="rgba(255,255,255,0.04)"
+          customStyle={styles.remixButton}
+          onPress={onRemix}
+          textColor={colors.white}
+          textStyle={styles.remixLabel}
+          title="Remix Idea"
+        />
       </View>
 
       <Text style={styles.title}>Describe the universe you want</Text>
@@ -59,9 +69,14 @@ export function PromptComposer({
           <Text style={styles.footerLabel}>Estimated render</Text>
           <Text style={styles.footerValue}>12 sec / 4 variants</Text>
         </View>
-        <Pressable style={styles.generateButton}>
-          <Text style={styles.generateLabel}>Generate</Text>
-        </Pressable>
+        <AppButton
+          bgColor={colors.cyan}
+          customStyle={styles.generateButton}
+          onPress={() => undefined}
+          textColor={colors.ink}
+          textStyle={styles.generateLabel}
+          title="Generate"
+        />
       </View>
     </View>
   );

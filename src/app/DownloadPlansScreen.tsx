@@ -1,5 +1,6 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import AppButton from "../components/AppButton";
 import { SectionHeader } from "../components/SectionHeader";
 import { colors, radii, typography } from "../constants/theme";
 import type { CreditPlan } from "../types/wallpaper";
@@ -55,9 +56,14 @@ function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
         ))}
       </View>
 
-      <Pressable style={({ pressed }) => [styles.planButton, pressed && styles.pressed]}>
-        <Text style={styles.planButtonText}>Choose package</Text>
-      </Pressable>
+      <AppButton
+        bgColor={colors.cyan}
+        customStyle={({ pressed }) => [styles.planButton, pressed && styles.pressed]}
+        onPress={() => undefined}
+        textColor={colors.ink}
+        textStyle={styles.planButtonText}
+        title="Choose package"
+      />
     </View>
   );
 }
@@ -69,9 +75,14 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>Close</Text>
-        </Pressable>
+        <AppButton
+          bgColor={colors.panelSoft}
+          customStyle={styles.closeButton}
+          onPress={onClose}
+          textColor={colors.cloud}
+          textStyle={styles.closeButtonText}
+          title="Close"
+        />
         <View style={styles.balancePill}>
           <Text style={styles.balanceLabel}>Dummy balance</Text>
           <Text style={styles.balanceValue}>84 credits</Text>

@@ -1,11 +1,11 @@
 import {
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
+import AppButton from "./AppButton";
 import { colors, radii, typography } from "../constants/theme";
 
 type AuthTextFieldProps = {
@@ -64,11 +64,14 @@ export function AuthTextField({
           value={value}
         />
         {showToggle ? (
-          <Pressable onPress={onToggleSecure} style={styles.toggle}>
-            <Text style={styles.toggleLabel}>
-              {isSecureVisible ? "Hide" : "Show"}
-            </Text>
-          </Pressable>
+          <AppButton
+            bgColor="transparent"
+            customStyle={styles.toggle}
+            onPress={() => onToggleSecure?.()}
+            textColor={colors.cyan}
+            textStyle={styles.toggleLabel}
+            title={isSecureVisible ? "Hide" : "Show"}
+          />
         ) : null}
       </View>
     </View>

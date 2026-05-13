@@ -1,12 +1,11 @@
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import AppButton from "../components/AppButton";
 import { AuthTextField } from "../components/AuthTextField";
 import { ChoiceChip } from "../components/ChoiceChip";
 import { ScreenShell } from "../components/ScreenShell";
@@ -150,23 +149,21 @@ export function AuthScreen() {
 
         {activeError ? <Text style={styles.errorText}>{activeError}</Text> : null}
 
-        <Pressable
-          disabled={isSubmitting}
-          onPress={handleSubmit}
-          style={({ pressed }) => [
+        <AppButton
+          bgColor={colors.cyan}
+          customStyle={({ pressed }) => [
             styles.submitButton,
             isSubmitting && styles.submitButtonDisabled,
             pressed && !isSubmitting && styles.submitButtonPressed,
           ]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.ink} />
-          ) : (
-            <Text style={styles.submitLabel}>
-              {mode === "sign-up" ? "Create account" : "Sign in"}
-            </Text>
-          )}
-        </Pressable>
+          isLoading={isSubmitting}
+          loadingColor={colors.ink}
+          onPress={handleSubmit}
+          pressableProps={{ disabled: isSubmitting }}
+          textColor={colors.ink}
+          textStyle={styles.submitLabel}
+          title={mode === "sign-up" ? "Create account" : "Sign in"}
+        />
 
         <Text style={styles.footnote}>
           Email/password auth is wired through Firebase and stored locally so

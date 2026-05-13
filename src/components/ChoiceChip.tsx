@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 
+import AppButton from "./AppButton";
 import { colors, radii } from "../constants/theme";
 
 type ChoiceChipProps = {
@@ -16,16 +17,18 @@ export function ChoiceChip({
   accent = colors.cyan,
 }: Readonly<ChoiceChipProps>) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
+    <AppButton
+      bgColor={selected ? accent : "rgba(255, 255, 255, 0.05)"}
+      customStyle={({ pressed }) => [
         styles.chip,
         selected && { backgroundColor: accent, borderColor: accent },
         pressed && styles.pressed,
       ]}
-    >
-      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
-    </Pressable>
+      onPress={() => onPress?.()}
+      textColor={selected ? colors.ink : colors.cloud}
+      textStyle={[styles.label, selected && styles.labelSelected]}
+      title={label}
+    />
   );
 }
 
