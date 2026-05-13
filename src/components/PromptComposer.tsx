@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
@@ -7,9 +8,10 @@ import {
 } from "react-native";
 
 import AppButton from "./AppButton";
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { onSnapshot, doc, getFirestore } from "firebase/firestore";
-import { initializeApp } from 'firebase/app';
+import type { Unsubscribe } from "firebase/firestore";
+import { getApps, initializeApp } from "firebase/app";
 import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
 
@@ -20,8 +22,31 @@ type PromptComposerProps = {
 type GenerationJobId = {
   jobId: string
 }
+type GenerationJobStatus = "idle" | "queued" | "processing" | "complete" | "failed";
 
-const app = initializeApp(firebaseConfig);
+const generationStatusCopy: Record<
+  Exclude<GenerationJobStatus, "idle">,
+  { label: string; message: string }
+> = {
+  queued: {
+    label: "Queued",
+    message: "Your wallpaper job is waiting for the next render slot.",
+  },
+  processing: {
+    label: "Processing",
+    message: "Gemini is building your cosmic wallpaper now.",
+  },
+  complete: {
+    label: "Complete",
+    message: "Your wallpaper is ready.",
+  },
+  failed: {
+    label: "Failed",
+    message: "We could not complete this generation. Try again in a moment.",
+  },
+};
+
+const app = getApps()[0] ?? initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
 export function PromptComposer({
@@ -29,10 +54,86 @@ export function PromptComposer({
   onRemix,
 }: Readonly<PromptComposerProps>) {
   const [prompt, setPrompt] = useState(initialPrompt);
+  const [generationStatus, setGenerationStatus] =
+    useState<GenerationJobStatus>("idle");
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
+  const isMountedRef = useRef<boolean>(true);
 
   useEffect(() => {
     setPrompt(initialPrompt);
   }, [initialPrompt]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      unsubscribeJobRef.current?.();
+    };
+  }, []);
+
+  const isGenerating =
+    generationStatus === "queued" || generationStatus === "processing";
+  const generationStatusInfo =
+    generationStatus === "idle" ? null : generationStatusCopy[generationStatus];
+
+  const handleGenerate = () => {
+    if (!prompt.trim() || isGenerating) {
+      return;
+    }
+
+    unsubscribeJobRef.current?.();
+    setGenerationStatus("queued");
+    setActiveJobId(null);
+
+    const startGenerationJob = httpsCallable<
+      { prompt: string; numberOfImages: number },
+      GenerationJobId
+    >(functions, "startGenerationJob");
+
+    startGenerationJob({ prompt, numberOfImages: 1 })
+      .then((result) => {
+        if (!isMountedRef.current) return;
+        const jobId = result.data.jobId;
+        setActiveJobId(jobId);
+
+        const jobRef = doc(getFirestore(app), "generationJobs", jobId);
+        unsubscribeJobRef.current = onSnapshot(
+          jobRef,
+          (snapshot) => {
+            if (!isMountedRef.current) return;
+            const job = snapshot.data();
+            if (!job) return;
+
+            if (job.status === "queued" || job.status === "processing") {
+              setGenerationStatus(job.status);
+              return;
+            }
+
+            if (job.status === "complete") {
+              setGenerationStatus("complete");
+              unsubscribeJobRef.current?.();
+              unsubscribeJobRef.current = null;
+              return;
+            }
+
+            if (job.status === "failed") {
+              setGenerationStatus("failed");
+              unsubscribeJobRef.current?.();
+              unsubscribeJobRef.current = null;
+            }
+          },
+          () => {
+            if (!isMountedRef.current) return;
+            setGenerationStatus("failed");
+            unsubscribeJobRef.current = null;
+          },
+        );
+      })
+      .catch(() => {
+        if (!isMountedRef.current) return;
+        setGenerationStatus("failed");
+      });
+  };
 
   return (
     <View style={styles.panel}>
@@ -77,34 +178,43 @@ export function PromptComposer({
         <AppButton
           bgColor={colors.cyan}
           customStyle={styles.generateButton}
-          onPress={() => {
-            const startGenerationJob = httpsCallable<{ prompt: string, numberOfImages: number }, GenerationJobId>(functions, "startGenerationJob");
-            startGenerationJob({ prompt, numberOfImages: 1}).then((result) => {
-              const jobId = result.data.jobId;
-              const jobRef = doc(getFirestore(), "generationJobs", jobId);
-              const unsubscribe = onSnapshot(jobRef, (snapshot) => {
-                const job = snapshot.data();
-                if (!job) return;
-                if (job.status === "queued") {
-                  // TODO: show queued state UI
-                }
-                if (job.status === "processing") {
-                  // TODO: show processing state UI
-                }
-                if (job.status === "completed") {
-                  // TODO: logic to extract images from storage and display
-                }
-                if (job.status === "failed") {
-                  // TODO: alert user on job failure
-                }
-              });
-            });
-          }}
+          isLoading={isGenerating}
+          loadingColor={colors.ink}
+          onPress={handleGenerate}
+          pressableProps={{ disabled: isGenerating }}
           textColor={colors.ink}
           textStyle={styles.generateLabel}
-          title="Generate"
+          title={isGenerating ? "Generating" : "Generate"}
         />
       </View>
+
+      {generationStatusInfo ? (
+        <View style={styles.jobStatusPanel}>
+          <View style={styles.jobStatusIcon}>
+            {isGenerating ? (
+              <ActivityIndicator color={colors.cyan} />
+            ) : (
+              <View
+                style={[
+                  styles.jobStatusDot,
+                  generationStatus === "failed" && styles.jobStatusDotFailed,
+                ]}
+              />
+            )}
+          </View>
+          <View style={styles.jobStatusCopy}>
+            <Text style={styles.jobStatusLabel}>
+              {generationStatusInfo.label}
+            </Text>
+            <Text style={styles.jobStatusMessage}>
+              {generationStatusInfo.message}
+            </Text>
+            {activeJobId ? (
+              <Text style={styles.jobStatusId}>Job {activeJobId}</Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -221,12 +331,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 3,
   },
-  freeGenerationNote: {
-    color: colors.success,
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 5,
-  },
   generateButton: {
     borderRadius: radii.pill,
     paddingHorizontal: 18,
@@ -241,5 +345,53 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: typography.body,
     fontWeight: "800",
+  },
+  jobStatusPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: "rgba(8, 20, 39, 0.72)",
+    padding: 14,
+  },
+  jobStatusIcon: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: "rgba(114, 228, 255, 0.1)",
+  },
+  jobStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.success,
+  },
+  jobStatusDotFailed: {
+    backgroundColor: colors.coral,
+  },
+  jobStatusCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  jobStatusLabel: {
+    color: colors.white,
+    fontSize: typography.body,
+    fontWeight: "800",
+  },
+  jobStatusMessage: {
+    color: colors.cloud,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  jobStatusId: {
+    color: colors.mist,
+    fontSize: typography.caption,
+    fontWeight: "700",
+    marginTop: 3,
+    textTransform: "uppercase",
   },
 });
