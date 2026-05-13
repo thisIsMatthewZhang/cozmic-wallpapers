@@ -95,7 +95,7 @@ export const processGenerationJob = onDocumentCreated(
     event.data?.ref.update({
       status: 'complete',
       updatedAt: FieldValue.serverTimestamp(),
-      imagePath: "" // TODO: specify image path
+      imagePaths: [] // TODO: specify image path
     });
   }
 );

@@ -8,6 +8,7 @@ import {
 
 import AppButton from "./AppButton";
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { onSnapshot, doc, getFirestore } from "firebase/firestore";
 import { initializeApp } from 'firebase/app';
 import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
@@ -16,8 +17,12 @@ type PromptComposerProps = {
   initialPrompt: string;
   onRemix: () => void;
 };
+type GenerationJobId = {
+  jobId: string
+}
 
 const app = initializeApp(firebaseConfig);
+const functions = getFunctions(app);
 
 export function PromptComposer({
   initialPrompt,
@@ -72,7 +77,29 @@ export function PromptComposer({
         <AppButton
           bgColor={colors.cyan}
           customStyle={styles.generateButton}
-          onPress={() => undefined}
+          onPress={() => {
+            const startGenerationJob = httpsCallable<{ prompt: string, numberOfImages: number }, GenerationJobId>(functions, "startGenerationJob");
+            startGenerationJob({ prompt, numberOfImages: 1}).then((result) => {
+              const jobId = result.data.jobId;
+              const jobRef = doc(getFirestore(), "generationJobs", jobId);
+              const unsubscribe = onSnapshot(jobRef, (snapshot) => {
+                const job = snapshot.data();
+                if (!job) return;
+                if (job.status === "queued") {
+                  // TODO: show queued state UI
+                }
+                if (job.status === "processing") {
+                  // TODO: show processing state UI
+                }
+                if (job.status === "completed") {
+                  // TODO: logic to extract images from storage and display
+                }
+                if (job.status === "failed") {
+                  // TODO: alert user on job failure
+                }
+              });
+            });
+          }}
           textColor={colors.ink}
           textStyle={styles.generateLabel}
           title="Generate"

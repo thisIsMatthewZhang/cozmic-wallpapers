@@ -9,6 +9,6 @@ export type GenerationJob = {
   status: GenerationJobStatus;
   createdAt: FirebaseFirestore.Timestamp | FirebaseFirestore.FieldValue;
   updatedAt: FirebaseFirestore.Timestamp | FirebaseFirestore.FieldValue;
-  imagePath?: string;
+  imagePaths?: string[];
   errorMessage?: string;
 };
