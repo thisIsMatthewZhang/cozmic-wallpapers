@@ -5,9 +5,9 @@ import {
   Text,
   TextInput,
   View,
-  Image
+  ImageSourcePropType
 } from "react-native";
-
+import AppCarousel from "./AppCarousel";
 import AppButton from "./AppButton";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { onSnapshot, doc, getFirestore } from "firebase/firestore";
@@ -58,7 +58,7 @@ export function PromptComposer({
   const [generationStatus, setGenerationStatus] =
     useState<GenerationJobStatus>("idle");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [imagePaths, setImagePaths] = useState<string[]>([]);
+  const [imagePaths, setImagePaths] = useState<ImageSourcePropType[]>([]);
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
@@ -112,7 +112,7 @@ export function PromptComposer({
             }
 
             if (job.status === "complete") {
-              const paths: string[] = job.imagePaths;
+              const paths: ImageSourcePropType[] = job.imagePaths;
               setImagePaths(paths);
               setGenerationStatus("complete");
               unsubscribeJobRef.current?.();
@@ -140,8 +140,8 @@ export function PromptComposer({
   };
 
   return (
-    // TODO: logic that displays Carousel after images are generated
     <View style={styles.panel}>
+      {imagePaths.length ? <AppCarousel data={imagePaths}/> : null}
       <View style={styles.ambientRing} />
       <View style={styles.ambientGlow} />
 
