@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   View,
+  Image
 } from "react-native";
 
 import AppButton from "./AppButton";
@@ -57,6 +58,7 @@ export function PromptComposer({
   const [generationStatus, setGenerationStatus] =
     useState<GenerationJobStatus>("idle");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [imagePaths, setImagePaths] = useState<string[]>([]);
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
@@ -110,6 +112,8 @@ export function PromptComposer({
             }
 
             if (job.status === "complete") {
+              const paths: string[] = job.imagePaths;
+              setImagePaths(paths);
               setGenerationStatus("complete");
               unsubscribeJobRef.current?.();
               unsubscribeJobRef.current = null;
