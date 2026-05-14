@@ -2,9 +2,9 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import AppButton from "../components/AppButton";
 import { SectionHeader } from "../components/SectionHeader";
+import { creditPlans } from "../constants/creditPlans";
 import { colors, radii, typography } from "../constants/theme";
 import type { CreditPlan } from "../types/wallpaper";
-import { creditPlans } from "../utils/mockData";
 
 type DownloadPlansScreenProps = {
   onClose: () => void;
