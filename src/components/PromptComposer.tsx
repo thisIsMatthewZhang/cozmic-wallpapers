@@ -140,6 +140,7 @@ export function PromptComposer({
   };
 
   return (
+    // TODO: logic that displays Carousel after images are generated
     <View style={styles.panel}>
       <View style={styles.ambientRing} />
       <View style={styles.ambientGlow} />

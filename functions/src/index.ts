@@ -92,11 +92,11 @@ export const processGenerationJob = onDocumentCreated(
       });
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
-    const imagePaths = response.generatedImages.map((img) => img.image?.gcsUri);
+    const imagePaths = response.generatedImages.map((img) => `users/${data.uid}/generations/${data.jobId}/` + img.image?.gcsUri);
     event.data?.ref.update({
       status: 'complete',
       updatedAt: FieldValue.serverTimestamp(),
-      imagePaths
+      imagePaths // path to file in Firestore
     });
   }
 );
