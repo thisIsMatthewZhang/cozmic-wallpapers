@@ -6,3 +6,5 @@ functions/node_modules
 src/constants/firebaseConfig.ts
 
 .env
+
+/test-images

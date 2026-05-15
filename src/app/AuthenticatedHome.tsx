@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
+  KeyboardAvoidingView,
   Pressable,
   StatusBar,
   StyleSheet,
   Text,
   View,
+  Platform
 } from "react-native";
 
 import AppButton from "../components/AppButton";
@@ -37,7 +39,7 @@ export function AuthenticatedHome() {
   const displayName = user?.displayName || user?.email?.split("@")[0] || "Explorer";
 
   return (
-    <>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" />
       <ScreenShell>
         <View style={styles.topBar}>
@@ -224,7 +226,7 @@ export function AuthenticatedHome() {
           </View>
         </View>
       </ReusableModal>
-    </>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -276,7 +278,7 @@ const styles = StyleSheet.create({
   hero: {
     paddingTop: 10,
     paddingHorizontal: 2,
-    paddingBottom: 4,
+    paddingBottom: 12,
     gap: 18,
   },
   heroCopy: {

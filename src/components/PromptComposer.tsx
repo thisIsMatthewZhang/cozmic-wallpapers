@@ -25,6 +25,9 @@ type GenerationJobId = {
 }
 type GenerationJobStatus = "idle" | "queued" | "processing" | "complete" | "failed";
 
+const MIN_IMAGE_COUNT = 1;
+const MAX_IMAGE_COUNT = 5;
+
 const generationStatusCopy: Record<
   Exclude<GenerationJobStatus, "idle">,
   { label: string; message: string }
@@ -59,6 +62,7 @@ export function PromptComposer({
     useState<GenerationJobStatus>("idle");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [imagePaths, setImagePaths] = useState<ImageSourcePropType[]>([]);
+  const [numberOfImages, setNumberOfImages] = useState("1");
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
@@ -77,6 +81,19 @@ export function PromptComposer({
     generationStatus === "queued" || generationStatus === "processing";
   const generationStatusInfo =
     generationStatus === "idle" ? null : generationStatusCopy[generationStatus];
+  const parsedImageCount = Number.parseInt(numberOfImages, 10);
+  const requestedImageCount = Number.isNaN(parsedImageCount)
+    ? MIN_IMAGE_COUNT
+    : Math.min(Math.max(parsedImageCount, MIN_IMAGE_COUNT), MAX_IMAGE_COUNT);
+
+  const handleImageCountChange = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setNumberOfImages(digitsOnly);
+  };
+
+  const normalizeImageCount = () => {
+    setNumberOfImages(String(requestedImageCount));
+  };
 
   const handleGenerate = () => {
     if (!prompt.trim() || isGenerating) {
@@ -92,7 +109,7 @@ export function PromptComposer({
       GenerationJobId
     >(functions, "startGenerationJob");
 
-    startGenerationJob({ prompt, numberOfImages: 1 })
+    startGenerationJob({ prompt, numberOfImages: requestedImageCount })
       .then((result) => {
         if (!isMountedRef.current) return;
         const jobId = result.data.jobId;
@@ -174,6 +191,26 @@ export function PromptComposer({
         style={styles.input}
         value={prompt}
       />
+
+      <View style={styles.settingsRow}>
+        <View style={styles.imageCountCopy}>
+          <Text style={styles.footerLabel}>Images</Text>
+          <Text style={styles.settingDescription}>
+            Generate up to {MAX_IMAGE_COUNT} options in one batch.
+          </Text>
+        </View>
+        <TextInput
+          keyboardType="number-pad"
+          maxLength={1}
+          onBlur={normalizeImageCount}
+          onChangeText={handleImageCountChange}
+          placeholder="1"
+          placeholderTextColor={colors.mist}
+          selectTextOnFocus
+          style={styles.imageCountInput}
+          value={numberOfImages}
+        />
+      </View>
 
       <View style={styles.footerRow}>
         <View>
@@ -323,6 +360,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     gap: 16,
+  },
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.overlay,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  imageCountCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  settingDescription: {
+    color: colors.mist,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  imageCountInput: {
+    width: 58,
+    minHeight: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
   },
   footerLabel: {
     color: colors.mist,
