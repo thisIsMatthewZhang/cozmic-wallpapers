@@ -6,7 +6,7 @@ import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
 import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
-import { FieldValue, getFirestore, updateDoc, decrement } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, updateDoc, increment } from "firebase-admin/firestore";
 
 initializeApp();
 const db = getFirestore();
@@ -92,7 +92,7 @@ export const processGenerationJob = onDocumentCreated(
     }
     const imagePaths = response.generatedImages.map((img) => `users/${data.uid}/generations/${data.jobId}/` + img.image?.gcsUri);
     const docRef = await db.doc(`users/${data.uid}`);
-    await updateDoc(docRef, { creditBalance: decrement(-data.creditCost) });
+    await updateDoc(docRef, { creditBalance: increment(-data.creditCost) });
     event.data?.ref.update({
       status: 'complete',
       updatedAt: FieldValue.serverTimestamp(),
