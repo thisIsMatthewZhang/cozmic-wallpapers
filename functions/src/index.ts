@@ -6,7 +6,7 @@ import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
 import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
-import { FieldValue, getFirestore, updateDoc, increment } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 initializeApp();
 const db = getFirestore();
@@ -91,12 +91,16 @@ export const processGenerationJob = onDocumentCreated(
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
     const imagePaths = response.generatedImages.map((img) => `users/${data.uid}/generations/${data.jobId}/` + img.image?.gcsUri);
-    const docRef = await db.doc(`users/${data.uid}`);
-    await updateDoc(docRef, { creditBalance: increment(-data.creditCost) });
-    event.data?.ref.update({
-      status: 'complete',
-      updatedAt: FieldValue.serverTimestamp(),
-      imagePaths // path to file in Firestore
+    const docRef = db.doc(`users/${data.uid}`);
+    await db.collection('users')
+    .doc(data.uid)
+    .update(docRef, { creditBalance: FieldValue.increment(-data.creditCost) })
+    .then(() => {
+      event.data?.ref.update({
+        status: 'complete',
+        updatedAt: FieldValue.serverTimestamp(),
+        imagePaths // path to file in Firestore
+      });
     });
   }
 );

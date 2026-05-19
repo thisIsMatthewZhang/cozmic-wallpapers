@@ -5,7 +5,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 * @dest string representing destination to download file to within the cache
 * @returns path to downloaded file (e.g. ${cacheDirectory}/pdfs/sample.pdf)
 */
-export async function downloadFileToCache(url: string, dest: string): string | null { 
+export async function downloadFileToCache(url: string, dest: string): Promise<string | null> { 
     const destination = new Directory(Paths.cache, dest);
     try {
       destination.create();
