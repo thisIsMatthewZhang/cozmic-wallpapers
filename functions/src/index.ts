@@ -6,9 +6,10 @@ import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
 import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, updateDoc, decrement } from "firebase-admin/firestore";
 
 initializeApp();
+const db = getFirestore();
 
 /**
  * 
@@ -42,8 +43,6 @@ export const startGenerationJob = onCall(
     if (typeof prompt !== "string" || !prompt.trim()) {
       throw new HttpsError("invalid-argument", "Prompt is required.");
     }
-
-    const db = getFirestore();
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
     const requestedResolution = req.data!.requestedResolution as keyof typeof MAPPING;
     if (docSnapshot.data()!.creditBalance < MAPPING[requestedResolution]) {
@@ -84,7 +83,6 @@ export const processGenerationJob = onDocumentCreated(
     });
     const response = await createImage(data.prompt, { numberOfImages: data.numberOfImages });
     if (!response.generatedImages!.length || !response.generatedImages) {
-      // TODO: refund used credits if generation failed
       event.data?.ref.update({
         status: 'failed',
         updatedAt: FieldValue.serverTimestamp(),
@@ -93,6 +91,8 @@ export const processGenerationJob = onDocumentCreated(
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
     const imagePaths = response.generatedImages.map((img) => `users/${data.uid}/generations/${data.jobId}/` + img.image?.gcsUri);
+    const docRef = await db.doc(`users/${data.uid}`);
+    await updateDoc(docRef, { creditBalance: decrement(-data.creditCost) });
     event.data?.ref.update({
       status: 'complete',
       updatedAt: FieldValue.serverTimestamp(),
