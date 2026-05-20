@@ -5,9 +5,8 @@ import {
   Text,
   TextInput,
   View,
-  ImageSourcePropType
+  ImageSourcePropType,
 } from "react-native";
-import AppCarousel from "./AppCarousel";
 import AppButton from "./AppButton";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { onSnapshot, doc, getFirestore } from "firebase/firestore";
@@ -16,8 +15,13 @@ import { getApps, initializeApp } from "firebase/app";
 import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
 
+const testImages = [
+
+];
+
 type PromptComposerProps = {
   initialPrompt: string;
+  onGenerationComplete: (images: ImageSourcePropType[]) => void;
   onRemix: () => void;
 };
 type GenerationJobId = {
@@ -53,15 +57,19 @@ const generationStatusCopy: Record<
 const app = getApps()[0] ?? initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
+const normalizeImageSources = (imagePaths: string[]): ImageSourcePropType[] => {
+  return imagePaths.map((imagePath) => ({ uri: imagePath }));
+};
+
 export function PromptComposer({
   initialPrompt,
+  onGenerationComplete,
   onRemix,
 }: Readonly<PromptComposerProps>) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [generationStatus, setGenerationStatus] =
     useState<GenerationJobStatus>("idle");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [imagePaths, setImagePaths] = useState<ImageSourcePropType[]>([]);
   const [numberOfImages, setNumberOfImages] = useState("1");
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
@@ -129,9 +137,9 @@ export function PromptComposer({
             }
 
             if (job.status === "complete") {
-              const paths: ImageSourcePropType[] = job.imagePaths;
-              setImagePaths(paths);
+              const paths = normalizeImageSources(job.imagePaths ?? []);
               setGenerationStatus("complete");
+              onGenerationComplete(paths);
               unsubscribeJobRef.current?.();
               unsubscribeJobRef.current = null;
               return;
@@ -158,7 +166,6 @@ export function PromptComposer({
 
   return (
     <View style={styles.panel}>
-      {imagePaths.length ? <AppCarousel data={imagePaths}/> : null}
       <View style={styles.ambientRing} />
       <View style={styles.ambientGlow} />
 

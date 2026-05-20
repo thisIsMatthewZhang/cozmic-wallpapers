@@ -6,16 +6,17 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform
+  Platform,
+  ImageSourcePropType,
 } from "react-native";
 
-import AppButton from "../components/AppButton";
-import { ChoiceChip } from "../components/ChoiceChip";
-import { PromptComposer } from "../components/PromptComposer";
-import ReusableModal from "../components/ReusableModal";
-import { ScreenShell } from "../components/ScreenShell";
-import { SectionHeader } from "../components/SectionHeader";
-import { WallpaperCard } from "../components/WallpaperCard";
+import AppButton from "@/src/components/AppButton";
+import { ChoiceChip } from "@/src/components/ChoiceChip";
+import { PromptComposer } from "@/src/components/PromptComposer";
+import ReusableModal from "@/src/components/ReusableModal";
+import { ScreenShell } from "@/src/components/ScreenShell";
+import { SectionHeader } from "@/src/components/SectionHeader";
+import { WallpaperCard } from "@/src/components/WallpaperCard";
 import { colors, radii, typography } from "../constants/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { usePromptSuggestion } from "../hooks/usePromptSuggestion";
@@ -28,7 +29,13 @@ import {
 } from "../utils/mockData";
 import { DownloadPlansScreen } from "./DownloadPlansScreen";
 
-export function AuthenticatedHome() {
+type AuthenticatedHomeProps = {
+  onGenerationComplete: (images: ImageSourcePropType[]) => void;
+};
+
+export function AuthenticatedHome({
+  onGenerationComplete,
+}: Readonly<AuthenticatedHomeProps>) {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
@@ -36,7 +43,7 @@ export function AuthenticatedHome() {
   const { suggestion, cycleSuggestion } = usePromptSuggestion();
   const { user, signOutUser } = useAuth();
 
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "Explorer";
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "Star Glider";
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} style={{ flex: 1 }}>
@@ -105,7 +112,11 @@ export function AuthenticatedHome() {
           </View>
         </View>
 
-        <PromptComposer initialPrompt={suggestion} onRemix={cycleSuggestion} />
+        <PromptComposer
+          initialPrompt={suggestion}
+          onGenerationComplete={onGenerationComplete}
+          onRemix={cycleSuggestion}
+        />
 
         <View style={styles.sectionBlock}>
           <SectionHeader

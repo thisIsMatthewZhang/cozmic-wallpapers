@@ -3,7 +3,7 @@ import { Modal } from "react-native";
 
 export interface ReusableModalProps {
   showModal: boolean;
-  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowModal: (showModal: boolean) => void;
   modalProps?: ComponentPropsWithoutRef<typeof Modal>;
 }
 

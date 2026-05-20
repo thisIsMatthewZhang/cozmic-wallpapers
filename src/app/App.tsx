@@ -1,12 +1,25 @@
-import { ActivityIndicator, StatusBar, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  ImageSourcePropType,
+  StatusBar,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useState } from "react";
 
 import { ScreenShell } from "../components/ScreenShell";
 import { colors } from "../constants/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { AuthenticatedHome } from "./AuthenticatedHome";
+import { GeneratedWallpapersScreen } from "./GeneratedWallpapersScreen";
+
+type AppRoute =
+  | { name: "home" }
+  | { images: ImageSourcePropType[]; name: "generatedWallpapers" };
 
 export default function CozmicApp() {
   const { user, isBootstrapping } = useAuth();
+  const [route, setRoute] = useState<AppRoute>({ name: "home" });
 
   if (isBootstrapping) {
     return (
@@ -21,8 +34,23 @@ export default function CozmicApp() {
     );
   }
 
+  if (route.name === "generatedWallpapers") {
+    return (
+      <GeneratedWallpapersScreen
+        images={route.images}
+        onBack={() => setRoute({ name: "home" })}
+      />
+    );
+  }
+
   // return user ? <AuthenticatedHome /> : <AuthScreen />;
-  return <AuthenticatedHome />;
+  return (
+    <AuthenticatedHome
+      onGenerationComplete={(images) =>
+        setRoute({ images, name: "generatedWallpapers" })
+      }
+    />
+  );
 }
 
 const styles = StyleSheet.create({
