@@ -6,20 +6,20 @@ import { addAssetsToAlbumAsync, createAssetAsync, requestPermissionsAsync, creat
  * @param name name of directory to create
  * @returns directory instance
  */
-function createNewDirectory(name: string): Directory {
+export function createNewDirectory(name: string): Directory {
     const directory = new Directory(Paths.cache, name);
     directory.create({ idempotent: true });
     return directory;
 }
 
 /** 
-* @param uri string representing the URL to desired file to download go cache
+* @param url string representing the URL to desired file to download go cache
 * @param dest string representing destination to download file to within the cache
 * @returns uri to downloaded file (e.g. ${cacheDirectory}/pdfs/sample.pdf)
 */
-async function downloadFileToDirectory(url: string, dest: string): Promise<string | null> {
+export async function downloadFileToDirectory(url: string | null, directory: Directory): Promise<string | null> {
     try {
-      const directory = createNewDirectory(dest);
+      if (!url) throw new Error("Sorry! There was an issue with downloading your images.");
       const output = await File.downloadFileAsync(url, directory);
       return output.uri; 
     } catch (error) {
@@ -33,9 +33,9 @@ async function downloadFileToDirectory(url: string, dest: string): Promise<strin
  * @param title name for newly created album
  * @returns new Album instance
  */
-export async function createNewAlbum(title: string) {
+export async function createNewAlbum(title: string, firstAsset: Asset) {
   await requestPermissionsAsync();
-  const newAlbum = await createAlbumAsync(title);
+  const newAlbum = await createAlbumAsync(title, firstAsset);
   return newAlbum;
 }
 
@@ -45,12 +45,9 @@ export async function createNewAlbum(title: string) {
  * @returns media library assets created from the directory contents
  */
 export async function createAssetsFromDirectory(directory: Directory): Promise<Asset[]> {
-  let assets: Asset[] = [];
-  directory.list().forEach(async file => {
-    const asset: Asset = await createAssetAsync(file.uri);
-    assets.push(asset);
-  });
-  return assets;
+  return Promise.all(
+    directory.list().map((file) => createAssetAsync(file.uri)),
+  );
 }
 
 /**

@@ -5,7 +5,7 @@ import { useSharedValue } from 'react-native-reanimated';
 
 const width = Dimensions.get("window").width;
 
-export default function AppCarousel({ data }: { data: ImageSourcePropType[] }) {
+export default function AppCarousel({ data }: Readonly<{ data: ImageSourcePropType[] }>) {
     const ref = useRef<ICarouselInstance | null>(null);
     const progress = useSharedValue<number>(0);
 

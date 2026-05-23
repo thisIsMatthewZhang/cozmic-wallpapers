@@ -14,10 +14,22 @@ import AppCarousel from "@/src/components/AppCarousel";
 import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
+import { createNewDirectory, downloadFileToDirectory, createAssetsFromDirectory, createNewAlbum, addAssetsToAlbum } from "../utils/mediaDownload";
 
 type GeneratedWallpapersScreenProps = {
   images: ImageSourcePropType[];
   onBack: () => void;
+};
+
+const isNetworkUri = (uri: string) => /^https?:\/\//i.test(uri);
+
+const getNetworkImageUri = (source: ImageSourcePropType): string | null => {
+  if (typeof source === "number") return null;
+
+  const imageSource = Array.isArray(source) ? source[0] : source;
+  return imageSource.uri && isNetworkUri(imageSource.uri)
+    ? imageSource.uri
+    : null;
 };
 
 export function GeneratedWallpapersScreen({
@@ -119,7 +131,17 @@ export function GeneratedWallpapersScreen({
               <AppButton
                 bgColor={colors.cyan}
                 customStyle={styles.modalButton}
-                onPress={() => setShowAlbumModal(false)}
+                onPress={async () => {
+                  const urls = images.map(getNetworkImageUri).filter((url): url is string => url !== null);
+                  if (!albumName.trim() || !urls.length) return;
+                  const directory = createNewDirectory(albumName);
+                  await Promise.all(urls.map(url => downloadFileToDirectory(url, directory)));
+                  const assets = await createAssetsFromDirectory(directory);
+                  if (!assets.length) return;
+                  const newAlbum = await createNewAlbum(albumName.trim(), assets[0]);
+                  await addAssetsToAlbum(newAlbum, assets.slice(1));
+                  setShowAlbumModal(false);
+                }}
                 textColor={colors.void}
                 title="Confirm"
               />

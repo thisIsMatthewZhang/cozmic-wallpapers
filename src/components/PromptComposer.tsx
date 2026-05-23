@@ -101,8 +101,6 @@ export function PromptComposer({
   };
 
   const handleGenerate = () => {
-    onGenerationComplete(mockImages);
-
     if (!prompt.trim() || isGenerating) {
       return;
     }
