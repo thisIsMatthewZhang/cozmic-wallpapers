@@ -1,15 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   ImageSourcePropType,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
 import AppButton from "@/src/components/AppButton";
 import AppCarousel from "@/src/components/AppCarousel";
+import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
 
@@ -23,6 +25,8 @@ export function GeneratedWallpapersScreen({
   onBack,
 }: Readonly<GeneratedWallpapersScreenProps>) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [albumName, setAlbumName] = useState("");
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -73,8 +77,56 @@ export function GeneratedWallpapersScreen({
                 : "wallpapers generated"}
             </Text>
           </View>
+
+          <AppButton
+            bgColor={colors.cyan}
+            customStyle={styles.saveButton}
+            onPress={() => setShowAlbumModal(true)}
+            textColor={colors.void}
+            textStyle={styles.saveButtonLabel}
+            title="Save to New Album"
+          />
         </Animated.View>
       </ScreenShell>
+      <ReusableModal
+        showModal={showAlbumModal}
+        setShowModal={setShowAlbumModal}
+        modalProps={{ animationType: "fade", transparent: true }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalPanel}>
+            <Text style={styles.modalTitle}>New album</Text>
+            <TextInput
+              autoFocus
+              placeholder="Album name"
+              placeholderTextColor={colors.mist}
+              value={albumName}
+              onChangeText={setAlbumName}
+              style={styles.albumInput}
+            />
+            <View style={styles.modalActions}>
+              <AppButton
+                bgColor={colors.panelSoft}
+                customStyle={styles.modalButton}
+                onPress={() => {
+                  setAlbumName("");
+                  setShowAlbumModal(false);
+
+                }}
+                textColor={colors.cloud}
+                title="Cancel"
+              />
+              <AppButton
+                bgColor={colors.cyan}
+                customStyle={styles.modalButton}
+                onPress={() => setShowAlbumModal(false)}
+                textColor={colors.void}
+                title="Confirm"
+              />
+            </View>
+          </View>
+        </View>
+      </ReusableModal>
     </>
   );
 }
@@ -165,5 +217,53 @@ const styles = StyleSheet.create({
     color: colors.cloud,
     fontSize: typography.body,
     fontWeight: "700",
+  },
+  saveButton: {
+    borderRadius: radii.md,
+    paddingVertical: 14,
+  },
+  saveButtonLabel: {
+    fontSize: typography.body,
+    fontWeight: "900",
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    backgroundColor: colors.overlay,
+    paddingHorizontal: 20,
+    paddingTop: 144,
+  },
+  modalPanel: {
+    width: "100%",
+    gap: 14,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.midnight,
+    padding: 18,
+  },
+  modalTitle: {
+    color: colors.white,
+    fontSize: typography.section,
+    fontWeight: "900",
+  },
+  albumInput: {
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.night,
+    color: colors.white,
+    fontSize: typography.body,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
   },
 });

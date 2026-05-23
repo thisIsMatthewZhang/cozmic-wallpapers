@@ -14,10 +14,7 @@ import type { Unsubscribe } from "firebase/firestore";
 import { getApps, initializeApp } from "firebase/app";
 import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
-
-const testImages = [
-
-];
+import { mockImages } from "../utils/mockImages";
 
 type PromptComposerProps = {
   initialPrompt: string;
@@ -104,6 +101,8 @@ export function PromptComposer({
   };
 
   const handleGenerate = () => {
+    onGenerationComplete(mockImages);
+
     if (!prompt.trim() || isGenerating) {
       return;
     }
