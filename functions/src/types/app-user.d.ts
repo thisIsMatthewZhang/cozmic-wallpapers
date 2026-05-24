@@ -11,7 +11,6 @@ export type AppUser = {
   totalGenerations: number;
   generatedJobIds: string[];
   generatedImagePaths: string[];
-  storageRootPath: string;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
   lastLoginAt?: Timestamp | FieldValue;

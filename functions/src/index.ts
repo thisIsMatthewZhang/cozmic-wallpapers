@@ -90,7 +90,18 @@ export const processGenerationJob = onDocumentCreated(
       });
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
-    const imagePaths = response.generatedImages.map((img) => `users/${data.uid}/generations/${data.jobId}/` + img.image?.gcsUri);
+    const imagePaths = response.generatedImages.map((img, index) => {
+      // Gemini API responds with candidates, each containing base64-encoded byte data for each image.
+      // Firestore will hold references to the byte data stored in a bucket.
+      const ind = index + 1;
+      const imagePath = `users/${data.uid}/generations/${data.jobId}/image-${ind}.png`;
+      const imageBytes = img.image?.imageBytes;
+      if (!imageBytes) {
+        throw new Error(`There was an issue when processing image-${ind}.png`);
+      }
+      const buffer = Buffer.from(imageBytes, "base64");
+      // TODO: set up storage bucket
+    });
     const docRef = db.doc(`users/${data.uid}`);
     await db.collection('users')
     .doc(data.uid)
@@ -99,7 +110,7 @@ export const processGenerationJob = onDocumentCreated(
       event.data?.ref.update({
         status: 'complete',
         updatedAt: FieldValue.serverTimestamp(),
-        imagePaths // path to file in Firestore
+        imagePaths // image references stored to Firestore
       });
     });
   }
