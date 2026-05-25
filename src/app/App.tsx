@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  ImageSourcePropType,
   StatusBar,
   StyleSheet,
   View,
@@ -15,7 +14,7 @@ import { GeneratedWallpapersScreen } from "./GeneratedWallpapersScreen";
 
 type AppRoute =
   | { name: "home" }
-  | { images: ImageSourcePropType[]; name: "generatedWallpapers" };
+  | { images: string[]; name: "generatedWallpapers" };
 
 export default function CozmicApp() {
   const { user, isBootstrapping } = useAuth();
@@ -37,7 +36,7 @@ export default function CozmicApp() {
   if (route.name === "generatedWallpapers") {
     return (
       <GeneratedWallpapersScreen
-        images={route.images}
+        jobImagePaths={route.images}
         onBack={() => setRoute({ name: "home" })}
       />
     );

@@ -18,7 +18,7 @@ import { mockImages } from "../utils/mockImages";
 
 type PromptComposerProps = {
   initialPrompt: string;
-  onGenerationComplete: (images: ImageSourcePropType[]) => void;
+  onGenerationComplete: (images: string[]) => void;
   onRemix: () => void;
 };
 type GenerationJobId = {
@@ -134,9 +134,8 @@ export function PromptComposer({
             }
 
             if (job.status === "complete") {
-              const paths = normalizeImageSources(job.imagePaths ?? []);
               setGenerationStatus("complete");
-              onGenerationComplete(paths);
+              onGenerationComplete(job.imagePaths ?? []);
               unsubscribeJobRef.current?.();
               unsubscribeJobRef.current = null;
               return;

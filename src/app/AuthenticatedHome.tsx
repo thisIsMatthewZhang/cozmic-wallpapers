@@ -7,7 +7,6 @@ import {
   Text,
   View,
   Platform,
-  ImageSourcePropType,
 } from "react-native";
 
 import AppButton from "@/src/components/AppButton";
@@ -30,7 +29,7 @@ import {
 import { DownloadPlansScreen } from "./DownloadPlansScreen";
 
 type AuthenticatedHomeProps = {
-  onGenerationComplete: (images: ImageSourcePropType[]) => void;
+  onGenerationComplete: (images: string[]) => void;
 };
 
 export function AuthenticatedHome({

@@ -15,9 +15,10 @@ import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
 import { createNewDirectory, downloadFileToDirectory, createAssetsFromDirectory, createNewAlbum, addAssetsToAlbum } from "../utils/mediaDownload";
+import { getDownloadURL, getStorage, ref  } from "firebase/storage";
 
 type GeneratedWallpapersScreenProps = {
-  images: ImageSourcePropType[];
+  jobImagePaths: string[];
   onBack: () => void;
 };
 
@@ -33,12 +34,15 @@ const getNetworkImageUri = (source: ImageSourcePropType): string | null => {
 };
 
 export function GeneratedWallpapersScreen({
-  images,
+  jobImagePaths,
   onBack,
 }: Readonly<GeneratedWallpapersScreenProps>) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showAlbumModal, setShowAlbumModal] = useState(false);
   const [albumName, setAlbumName] = useState("");
+  const [images, setImages] = useState<ImageSourcePropType[]>([]); // URIs to pass to AppCarousel
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -47,6 +51,21 @@ export function GeneratedWallpapersScreen({
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+  useEffect(() => {
+    Promise.all(jobImagePaths.map(async (path) => {
+      const url = await getDownloadURL(ref(getStorage(), path));
+      return url;
+    }))
+    .then((urls) => {
+      if (!isMountedRef.current) return;
+      setImageUrls(urls);
+      setImages(urls.map((url) => ({ uri: url })));
+    });
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [jobImagePaths]);
 
   return (
     <>
@@ -132,10 +151,10 @@ export function GeneratedWallpapersScreen({
                 bgColor={colors.cyan}
                 customStyle={styles.modalButton}
                 onPress={async () => {
-                  const urls = images.map(getNetworkImageUri).filter((url): url is string => url !== null);
-                  if (!albumName.trim() || !urls.length) return;
+                  
+                  if (!albumName.trim() || !imageUrls.length) return;
                   const directory = createNewDirectory(albumName);
-                  await Promise.all(urls.map(url => downloadFileToDirectory(url, directory)));
+                  await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
                   const assets = await createAssetsFromDirectory(directory);
                   if (!assets.length) return;
                   const newAlbum = await createNewAlbum(albumName.trim(), assets[0]);
