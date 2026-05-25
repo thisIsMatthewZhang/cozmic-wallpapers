@@ -2,7 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
-import { MAPPING } from "./resolution-credit-mapping.js";
+import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -10,6 +10,8 @@ import { getStorage } from "firebase-admin/storage";
 initializeApp();
 const db = getFirestore();
 const bucket = getStorage().bucket('gs://cozmic-wallpapers-65b41.firebasestorage.app');
+const MIN_IMAGE_COUNT = 1;
+const MAX_IMAGE_COUNT = 5;
 
 /**
  * 
@@ -43,9 +45,17 @@ export const startGenerationJob = onCall(
     if (typeof prompt !== "string" || !prompt.trim()) {
       throw new HttpsError("invalid-argument", "Prompt is required.");
     }
+    if (!Number.isInteger(numberOfImages) || numberOfImages < MIN_IMAGE_COUNT || numberOfImages > MAX_IMAGE_COUNT) throw new HttpsError("invalid-argument", "Number of images must be between 1 to 5.");
+    
+    const requestedResolution = req.data!.requestedResolution as keyof typeof CREDIT_COST_MAPPING;
+    if (typeof requestedResolution !== "string" || !(requestedResolution in CREDIT_COST_MAPPING)) throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K");
+    
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
-    const requestedResolution = req.data!.requestedResolution as keyof typeof MAPPING;
-    if (docSnapshot.data()!.creditBalance < MAPPING[requestedResolution] * numberOfImages) {
+    if (!docSnapshot.exists) throw new HttpsError("failed-precondition", "User profile did not initialize properly. Unable to start image creation.");
+    
+    const user = docSnapshot.data();
+    if (!user) throw new HttpsError("not-found", "No data found with your profile. Please reach out to support.");
+    if ((user.creditBalance ?? 0) < CREDIT_COST_MAPPING[requestedResolution] * numberOfImages) {
       throw new HttpsError("unavailable", "Not enough credits to generate image.");
     }
 
@@ -56,7 +66,7 @@ export const startGenerationJob = onCall(
       prompt,
       resolution: requestedResolution,
       numberOfImages,
-      creditCost: MAPPING[requestedResolution] * numberOfImages,
+      creditCost: CREDIT_COST_MAPPING[requestedResolution] * numberOfImages,
       status: "queued",
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
