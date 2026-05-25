@@ -1,6 +1,7 @@
 export type GenerationJobStatus = "queued" | "processing" | "complete" | "failed";
 
 export type GenerationJob = {
+  jobId: string;
   uid: string;
   prompt: string;
   resolution: string;

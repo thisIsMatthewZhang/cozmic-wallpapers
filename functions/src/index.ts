@@ -1,15 +1,15 @@
 import { initializeApp } from "firebase-admin/app";
-import { getAppCheck } from "firebase-admin/app-check";
-import { getAuth } from "firebase-admin/auth";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
 import { MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
 const db = getFirestore();
+const bucket = getStorage().bucket('gs://cozmic-wallpapers-65b41.firebasestorage.app');
 
 /**
  * 
@@ -45,19 +45,21 @@ export const startGenerationJob = onCall(
     }
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
     const requestedResolution = req.data!.requestedResolution as keyof typeof MAPPING;
-    if (docSnapshot.data()!.creditBalance < MAPPING[requestedResolution]) {
+    if (docSnapshot.data()!.creditBalance < MAPPING[requestedResolution] * numberOfImages) {
       throw new HttpsError("unavailable", "Not enough credits to generate image.");
     }
 
-    const jobRef = await db.collection("generationJobs").add({
-        uid: req.auth.uid,
-        prompt,
-        resolution: requestedResolution,
-        numberOfImages,
-        creditCost: MAPPING[requestedResolution],
-        status: "queued",
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+    const jobRef = db.collection("generationJobs").doc();
+    await jobRef.set({
+      jobId: jobRef.id,
+      uid: req.auth.uid,
+      prompt,
+      resolution: requestedResolution,
+      numberOfImages,
+      creditCost: MAPPING[requestedResolution] * numberOfImages,
+      status: "queued",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return { jobId: jobRef.id };
@@ -72,42 +74,50 @@ export const processGenerationJob = onDocumentCreated(
   "generationJobs/{jobId}",
   async (event) => {
     const snapshot = event.data;
+    const jobId = event.params.jobId;
     if (!snapshot) {
-      console.log("There was an issue with finding the document associated with this generation job");
-      return;
+      throw new Error ("There was an issue with finding the document associated with this generation job");
     }
     const data = snapshot.data();
-    event.data?.ref.update({
+    await event.data?.ref.update({
       status: 'processing',
       updatedAt: FieldValue.serverTimestamp()
     });
     const response = await createImage(data.prompt, { numberOfImages: data.numberOfImages });
     if (!response.generatedImages!.length || !response.generatedImages) {
-      event.data?.ref.update({
+      await event.data?.ref.update({
         status: 'failed',
         updatedAt: FieldValue.serverTimestamp(),
         errorMessage: "Image creation failed"
       });
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
-    const imagePaths = response.generatedImages.map((img, index) => {
+    const imagePaths = await Promise.all(response.generatedImages.map(async (img, index) => {
       // Gemini API responds with candidates, each containing base64-encoded byte data for each image.
       // Firestore will hold references to the byte data stored in a bucket.
       const ind = index + 1;
-      const imagePath = `users/${data.uid}/generations/${data.jobId}/image-${ind}.png`;
+      const imagePath = `users/${data.uid}/generations/${jobId}/image-${ind}.png`;
       const imageBytes = img.image?.imageBytes;
       if (!imageBytes) {
         throw new Error(`There was an issue when processing image-${ind}.png`);
       }
       const buffer = Buffer.from(imageBytes, "base64");
-      // TODO: set up storage bucket
-    });
+      await bucket.file(imagePath).save(buffer, {
+        metadata: {
+          contentType: "image/png",
+          metadata: {
+            uid: data.uid,
+            jobId,
+            imageIndex: String(ind)
+          }
+        }
+      });
+      return imagePath;
+    }));
     const docRef = db.doc(`users/${data.uid}`);
-    await db.collection('users')
-    .doc(data.uid)
-    .update(docRef, { creditBalance: FieldValue.increment(-data.creditCost) })
-    .then(() => {
-      event.data?.ref.update({
+    await docRef.update({ creditBalance: FieldValue.increment(-data.creditCost) })
+    .then(async () => {
+      await event.data?.ref.update({
         status: 'complete',
         updatedAt: FieldValue.serverTimestamp(),
         imagePaths // image references stored to Firestore
