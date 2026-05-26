@@ -1,5 +1,5 @@
 /**
- * Mapping between output resolution and credit cost (backend)
+ * Mapping between output resolution and credit cost (frontend)
  */
 export const CREDIT_COST_MAPPING = {
     "1K": 6,

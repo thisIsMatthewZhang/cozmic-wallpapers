@@ -116,6 +116,7 @@ export function GeneratedWallpapersScreen({
             textColor={colors.void}
             textStyle={styles.saveButtonLabel}
             title="Save to New Album"
+            pressableProps={{ disabled: !imageUrls.length }}
           />
         </Animated.View>
       </ScreenShell>
@@ -151,7 +152,6 @@ export function GeneratedWallpapersScreen({
                 bgColor={colors.cyan}
                 customStyle={styles.modalButton}
                 onPress={async () => {
-                  
                   if (!albumName.trim() || !imageUrls.length) return;
                   const directory = createNewDirectory(albumName);
                   await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));

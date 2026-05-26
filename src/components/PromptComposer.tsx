@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -8,14 +9,17 @@ import {
   ImageSourcePropType,
 } from "react-native";
 import AppButton from "./AppButton";
+import { ChoiceChip } from "./ChoiceChip";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { onSnapshot, doc, getFirestore } from "firebase/firestore";
 import type { Unsubscribe } from "firebase/firestore";
 import { getApps, initializeApp } from "firebase/app";
 import firebaseConfig from '@/src/constants/firebaseConfig';
 import { colors, radii, typography } from "../constants/theme";
-import { mockImages } from "../utils/mockImages";
+import { CREDIT_COST_MAPPING } from "../constants/resolution-credit-mapping";
 
+
+type CreditCostMappingType = keyof typeof CREDIT_COST_MAPPING;
 type PromptComposerProps = {
   initialPrompt: string;
   onGenerationComplete: (images: string[]) => void;
@@ -28,6 +32,12 @@ type GenerationJobStatus = "idle" | "queued" | "processing" | "complete" | "fail
 
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
+const resolutionOptions = Object.entries(CREDIT_COST_MAPPING).map(
+  ([resolution, credits]) => ({
+    resolution: resolution as CreditCostMappingType,
+    credits,
+  }),
+);
 
 const generationStatusCopy: Record<
   Exclude<GenerationJobStatus, "idle">,
@@ -68,6 +78,7 @@ export function PromptComposer({
     useState<GenerationJobStatus>("idle");
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [numberOfImages, setNumberOfImages] = useState("1");
+  const [requestedResolution, setRequestedResolution] = useState<CreditCostMappingType>("1K");
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
@@ -110,11 +121,11 @@ export function PromptComposer({
     setActiveJobId(null);
 
     const startGenerationJob = httpsCallable<
-      { prompt: string; numberOfImages: number },
+      { prompt: string; numberOfImages: number, requestedResolution: CreditCostMappingType },
       GenerationJobId
     >(functions, "startGenerationJob");
 
-    startGenerationJob({ prompt, numberOfImages: requestedImageCount })
+    startGenerationJob({ prompt, numberOfImages: requestedImageCount, requestedResolution })
       .then((result) => {
         if (!isMountedRef.current) return;
         const jobId = result.data.jobId;
@@ -213,6 +224,34 @@ export function PromptComposer({
           style={styles.imageCountInput}
           value={numberOfImages}
         />
+      </View>
+
+      <View style={styles.resolutionPanel}>
+        <View style={styles.resolutionHeader}>
+          <View style={styles.imageCountCopy}>
+            <Text style={styles.footerLabel}>Resolution</Text>
+            <Text style={styles.settingDescription}>
+              Higher resolutions use more credits per image.
+            </Text>
+          </View>
+          <Text style={styles.creditCostLabel}>
+            {CREDIT_COST_MAPPING[requestedResolution]} credits
+          </Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.resolutionOptions}
+        >
+          {resolutionOptions.map((option) => (
+            <ChoiceChip
+              key={option.resolution}
+              label={option.resolution}
+              onPress={() => setRequestedResolution(option.resolution)}
+              selected={requestedResolution === option.resolution}
+            />
+          ))}
+        </ScrollView>
       </View>
 
       <View style={styles.footerRow}>
@@ -396,6 +435,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     textAlign: "center",
+  },
+  resolutionPanel: {
+    gap: 12,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.overlay,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  resolutionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  creditCostLabel: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  resolutionOptions: {
+    gap: 10,
   },
   footerLabel: {
     color: colors.mist,
