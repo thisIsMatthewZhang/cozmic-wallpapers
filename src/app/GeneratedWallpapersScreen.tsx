@@ -42,6 +42,7 @@ export function GeneratedWallpapersScreen({
   const [albumName, setAlbumName] = useState("");
   const [images, setImages] = useState<ImageSourcePropType[]>([]); // URIs to pass to AppCarousel
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [failedToDisplayImages, setFailedToDisplayImages] = useState(false);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -52,14 +53,21 @@ export function GeneratedWallpapersScreen({
     }).start();
   }, [fadeAnim]);
   useEffect(() => {
+    const storage = getStorage();
     Promise.all(jobImagePaths.map(async (path) => {
-      const url = await getDownloadURL(ref(getStorage(), path));
+      const url = await getDownloadURL(ref(storage, path));
       return url;
     }))
     .then((urls) => {
       if (!isMountedRef.current) return;
       setImageUrls(urls);
       setImages(urls.map((url) => ({ uri: url })));
+    })
+    .catch((reason) => {
+      if (!isMountedRef.current) return;
+      setFailedToDisplayImages(true);
+      setImageUrls([]);
+      setImages([]);
     });
 
     return () => {
@@ -87,7 +95,11 @@ export function GeneratedWallpapersScreen({
             />
           </View>
 
-          {images.length ? (
+          {failedToDisplayImages ? (
+            <View style={styles.emptyPanel}>
+              <Text style={styles.emptyTitle}>Failed to display images.</Text>
+            </View>
+          ) : images.length ? (
             <View style={styles.previewPanel}>
               <AppCarousel data={images} />
             </View>

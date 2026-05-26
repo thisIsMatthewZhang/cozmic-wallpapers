@@ -86,7 +86,7 @@ export const processGenerationJob = onDocumentCreated(
     const snapshot = event.data;
     const jobId = event.params.jobId;
     if (!snapshot) {
-      throw new Error ("There was an issue with finding the document associated with this generation job");
+      throw new HttpsError("not-found", "There was an issue with finding the document associated with this generation job");
     }
     const data = snapshot.data();
     await event.data?.ref.update({
@@ -98,7 +98,7 @@ export const processGenerationJob = onDocumentCreated(
       await event.data?.ref.update({
         status: 'failed',
         updatedAt: FieldValue.serverTimestamp(),
-        errorMessage: "Image creation failed"
+        errorMessage: "Images failed to generate."
       });
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
@@ -109,6 +109,11 @@ export const processGenerationJob = onDocumentCreated(
       const imagePath = `users/${data.uid}/generations/${jobId}/image-${ind}.png`;
       const imageBytes = img.image?.imageBytes;
       if (!imageBytes) {
+        await event.data?.ref.update({
+          status: 'failed',
+          updatedAt: FieldValue.serverTimestamp(),
+          errorMessage: `Issue with image-${index}.`
+        });
         throw new Error(`There was an issue when processing image-${ind}.png`);
       }
       const buffer = Buffer.from(imageBytes, "base64");

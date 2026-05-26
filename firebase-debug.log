@@ -1,0 +1,27 @@
+[debug] [2026-05-26T00:58:16.739Z] ----------------------------------------------------------------------
+[debug] [2026-05-26T00:58:16.752Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\zhang\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2026-05-26T00:58:16.752Z] CLI Version:   15.16.0
+[debug] [2026-05-26T00:58:16.752Z] Platform:      win32
+[debug] [2026-05-26T00:58:16.753Z] Node Version:  v22.19.0
+[debug] [2026-05-26T00:58:16.753Z] Time:          Mon May 25 2026 19:58:16 GMT-0500 (Central Daylight Time)
+[debug] [2026-05-26T00:58:16.753Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-26T00:58:16.757Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-05-26T00:58:20.025Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-26T00:58:20.026Z] > authorizing via signed-in user (zhangmatt22@gmail.com)
+[info] i  emulators: Starting emulators: functions, extensions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions, extensions"}}
+[info] i  emulators: Detected demo project ID "demo-no-project", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail. {"metadata":{"emulator":{"name":"hub"},"message":"Detected demo project ID \"demo-no-project\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail."}}
+[debug] [2026-05-26T00:58:20.056Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-26T00:58:20.056Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-05-26T00:58:20.073Z] Write emulator hub locator at C:\Users\zhang\AppData\Local\Temp\hub-demo-no-project.json
+[debug] [2026-05-26T00:58:20.088Z] [Extensions] Started Extensions emulator, this is a noop.
+[debug] [2026-05-26T00:58:20.096Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-26T00:58:20.096Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-26T00:58:20.096Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-05-26T00:58:20.096Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[debug] [2026-05-26T00:58:20.118Z] defaultcredentials: writing to file C:\Users\zhang\AppData\Roaming\firebase\zhangmatt22_gmail_com_application_default_credentials.json
+[debug] [2026-05-26T00:58:20.126Z] Setting GAC to C:\Users\zhang\AppData\Roaming\firebase\zhangmatt22_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\zhang\\AppData\\Roaming\\firebase\\zhangmatt22_gmail_com_application_default_credentials.json"}}
+[info] i  ui: downloading ui-v1.15.0.zip... {"metadata":{"emulator":{"name":"ui"},"message":"downloading ui-v1.15.0.zip..."}}
+[debug] [2026-05-26T00:58:20.173Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip 
+[debug] [2026-05-26T00:58:20.359Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip 200
+[debug] [2026-05-26T00:58:20.360Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/ui-v1.15.0.zip [stream]
