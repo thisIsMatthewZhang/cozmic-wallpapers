@@ -3,7 +3,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
-import { GoogleGenAI, GenerateImagesConfig, ImageConfig, GenerateContentConfig } from "@google/genai";
+import { GoogleGenAI, GenerateContentConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
@@ -21,13 +21,12 @@ const MAX_IMAGE_COUNT = 5;
  * @param model chosen model used to fulfill request and generate response
  * @returns GenerateImagesResponse object
  */
-async function createImage(prompt: string, { candidateCount = 1, imageConfig = { imageSize: "1K", aspectRatio: "1:1" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
+async function createImage(prompt: string, { imageConfig = { imageSize: "1K", aspectRatio: "1:1" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
   const response = await ai.models.generateContent({
     model: model,
     contents: prompt,
     config: {
       responseModalities: ["IMAGE"],
-      candidateCount: candidateCount, 
       imageConfig: {
         imageSize: imageConfig.imageSize,
         aspectRatio: imageConfig.aspectRatio,
@@ -106,48 +105,45 @@ export const processGenerationJob = onDocumentCreated(
       status: 'processing',
       updatedAt: FieldValue.serverTimestamp()
     });
-    const response = await createImage(data.prompt, { 
-      candidateCount: data.numberOfImages, 
-      imageConfig: { 
-        imageSize: data.resolution,
-        aspectRatio: data.aspectRatio, 
-      } 
-    });
-    if (!response?.candidates?.[0]?.content?.parts) {
-      await event.data?.ref.update({
-        status: 'failed',
-        updatedAt: FieldValue.serverTimestamp(),
-        errorMessage: "Images failed to generate."
-      });
-      throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
-    }
-    let imagePaths = await Promise.all(response.candidates[0].content.parts.map(async (part, index) => {
-      // Gemini API responds with candidates, each containing base64-encoded byte data for each image.
-      // Firestore will hold references to the byte data stored in a bucket.
-      const ind = index + 1;
-      const imagePath = `users/${data.uid}/generations/${jobId}/image-${ind}.png`;
-      const imageBytes = part.inlineData?.data;
-      if (!imageBytes) {
-        await event.data?.ref.update({
-          status: 'failed',
-          updatedAt: FieldValue.serverTimestamp(),
-          errorMessage: `Issue with image-${index}.`
-        });
-        throw new Error(`There was an issue when processing image-${ind}.png`);
-      }
-      const buffer = Buffer.from(imageBytes, "base64");
-      await bucket.file(imagePath).save(buffer, {
-        metadata: {
-          contentType: "image/png",
-          metadata: {
-            uid: data.uid,
-            jobId,
-            imageIndex: String(ind)
+    const imagePaths = await Promise.all(
+      Array.from({ length: data.numberOfImages }, async (_, index) => {
+        const response = await createImage(data.prompt, {
+          imageConfig: {
+            imageSize: data.resolution,
+            aspectRatio: data.aspectRatio,
           }
+        });
+
+        const imageBytes = response.candidates
+          ?.flatMap((candidate) => candidate.content?.parts ?? [])
+          .find((part) => part.inlineData?.data)
+          ?.inlineData?.data;
+
+        if (!imageBytes) {
+          await event.data?.ref.update({
+            status: 'failed',
+            updatedAt: FieldValue.serverTimestamp(),
+            errorMessage: `Issue with image-${index}.`
+          });
+          throw new Error(`There was an issue when processing image-${index + 1}.png`);
         }
-      });
-      return imagePath;
-    }));
+
+        const ind = index + 1;
+        const imagePath = `users/${data.uid}/generations/${jobId}/image-${ind}.png`;
+        const buffer = Buffer.from(imageBytes, "base64");
+        await bucket.file(imagePath).save(buffer, {
+          metadata: {
+            contentType: "image/png",
+            metadata: {
+              uid: data.uid,
+              jobId,
+              imageIndex: String(ind)
+            }
+          }
+        });
+        return imagePath;
+      })
+    );
     const docRef = db.doc(`users/${data.uid}`);
     await docRef.update({ creditBalance: FieldValue.increment(-data.creditCost) })
     .then(async () => {
