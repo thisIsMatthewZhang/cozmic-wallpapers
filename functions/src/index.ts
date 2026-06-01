@@ -1,15 +1,15 @@
 import { initializeApp } from "firebase-admin/app";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
-import { GENAI_CLIENT, NANO_BANANA_2, Model } from './gemini-client.js';
+import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
-import { GoogleGenAI, GenerateImagesConfig } from "@google/genai";
+import { GoogleGenAI, GenerateImagesConfig, ImageConfig, GenerateContentConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
 const db = getFirestore();
-const bucket = getStorage().bucket('gs://cozmic-wallpapers-65b41.firebasestorage.app');
+const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
 
@@ -21,11 +21,18 @@ const MAX_IMAGE_COUNT = 5;
  * @param model chosen model used to fulfill request and generate response
  * @returns GenerateImagesResponse object
  */
-async function createImage(prompt: string, { numberOfImages = 1, includeRaiReason = true }: GenerateImagesConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA_2) {
-  const response = await ai.models.generateImages({
+async function createImage(prompt: string, { candidateCount = 1, imageConfig = { imageSize: "1K", aspectRatio: "1:1" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
+  const response = await ai.models.generateContent({
     model: model,
-    prompt: prompt,
-    config: { numberOfImages, includeRaiReason }
+    contents: prompt,
+    config: {
+      responseModalities: ["IMAGE"],
+      candidateCount: candidateCount, 
+      imageConfig: {
+        imageSize: imageConfig.imageSize,
+        aspectRatio: imageConfig.aspectRatio,
+      } 
+    }
   });
   return response;
 }
@@ -35,7 +42,7 @@ async function createImage(prompt: string, { numberOfImages = 1, includeRaiReaso
  * Client validation is processed along with prompt checking.
  */
 export const startGenerationJob = onCall(
-  { region: "us-central1", enforceAppCheck: true },
+  { region: "us-central1", enforceAppCheck: false },
   async (req) => {
     if (!req.auth) {
       throw new HttpsError("unauthenticated", "Sign in required.");
@@ -48,13 +55,19 @@ export const startGenerationJob = onCall(
     if (!Number.isInteger(numberOfImages) || numberOfImages < MIN_IMAGE_COUNT || numberOfImages > MAX_IMAGE_COUNT) throw new HttpsError("invalid-argument", "Number of images must be between 1 to 5.");
     
     const requestedResolution = req.data!.requestedResolution as keyof typeof CREDIT_COST_MAPPING;
-    if (typeof requestedResolution !== "string" || !(requestedResolution in CREDIT_COST_MAPPING)) throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K");
+    if (typeof requestedResolution !== "string" || !(requestedResolution in CREDIT_COST_MAPPING)) { 
+      throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K"); 
+    }
     
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
-    if (!docSnapshot.exists) throw new HttpsError("failed-precondition", "User profile did not initialize properly. Unable to start image creation.");
+    if (!docSnapshot.exists) { 
+      throw new HttpsError("failed-precondition", "User profile did not initialize properly. Unable to start image creation."); 
+    }
     
     const user = docSnapshot.data();
-    if (!user) throw new HttpsError("not-found", "No data found with your profile. Please reach out to support.");
+    if (!user) { 
+      throw new HttpsError("not-found", "No data found with your profile. Please reach out to support."); 
+    }
     if ((user.creditBalance ?? 0) < CREDIT_COST_MAPPING[requestedResolution] * numberOfImages) {
       throw new HttpsError("unavailable", "Not enough credits to generate image.");
     }
@@ -93,8 +106,14 @@ export const processGenerationJob = onDocumentCreated(
       status: 'processing',
       updatedAt: FieldValue.serverTimestamp()
     });
-    const response = await createImage(data.prompt, { numberOfImages: data.numberOfImages });
-    if (!response.generatedImages!.length || !response.generatedImages) {
+    const response = await createImage(data.prompt, { 
+      candidateCount: data.numberOfImages, 
+      imageConfig: { 
+        imageSize: data.resolution,
+        aspectRatio: data.aspectRatio, 
+      } 
+    });
+    if (!response?.candidates?.[0]?.content?.parts) {
       await event.data?.ref.update({
         status: 'failed',
         updatedAt: FieldValue.serverTimestamp(),
@@ -102,12 +121,12 @@ export const processGenerationJob = onDocumentCreated(
       });
       throw new HttpsError("internal", "We had an issue with creating your image. Used credits will be refunded.");
     }
-    const imagePaths = await Promise.all(response.generatedImages.map(async (img, index) => {
+    let imagePaths = await Promise.all(response.candidates[0].content.parts.map(async (part, index) => {
       // Gemini API responds with candidates, each containing base64-encoded byte data for each image.
       // Firestore will hold references to the byte data stored in a bucket.
       const ind = index + 1;
       const imagePath = `users/${data.uid}/generations/${jobId}/image-${ind}.png`;
-      const imageBytes = img.image?.imageBytes;
+      const imageBytes = part.inlineData?.data;
       if (!imageBytes) {
         await event.data?.ref.update({
           status: 'failed',

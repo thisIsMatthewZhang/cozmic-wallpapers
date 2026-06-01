@@ -10,11 +10,10 @@ import {
 } from "react-native";
 import AppButton from "./AppButton";
 import { ChoiceChip } from "./ChoiceChip";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { onSnapshot, doc, getFirestore } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { onSnapshot, doc } from "firebase/firestore";
 import type { Unsubscribe } from "firebase/firestore";
-import { getApps, initializeApp } from "firebase/app";
-import firebaseConfig from '@/src/constants/firebaseConfig';
+import { db, functions } from "@/src/utils/firebase";
 import { colors, radii, typography } from "../constants/theme";
 import { CREDIT_COST_MAPPING } from "../constants/resolution-credit-mapping";
 
@@ -60,9 +59,6 @@ const generationStatusCopy: Record<
     message: "We could not complete this generation. Try again in a moment.",
   },
 };
-
-const app = getApps()[0] ?? initializeApp(firebaseConfig);
-const functions = getFunctions(app);
 
 const normalizeImageSources = (imagePaths: string[]): ImageSourcePropType[] => {
   return imagePaths.map((imagePath) => ({ uri: imagePath }));
@@ -131,7 +127,7 @@ export function PromptComposer({
         const jobId = result.data.jobId;
         setActiveJobId(jobId);
 
-        const jobRef = doc(getFirestore(app), "generationJobs", jobId);
+        const jobRef = doc(db, "generationJobs", jobId);
         unsubscribeJobRef.current = onSnapshot(
           jobRef,
           (snapshot) => {

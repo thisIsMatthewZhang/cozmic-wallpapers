@@ -14,8 +14,9 @@ import AppCarousel from "@/src/components/AppCarousel";
 import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
+import { storage } from "@/src/utils/firebase";
 import { createNewDirectory, downloadFileToDirectory, createAssetsFromDirectory, createNewAlbum, addAssetsToAlbum } from "../utils/mediaDownload";
-import { getDownloadURL, getStorage, ref  } from "firebase/storage";
+import { getDownloadURL, ref } from "firebase/storage";
 
 type GeneratedWallpapersScreenProps = {
   jobImagePaths: string[];
@@ -53,7 +54,6 @@ export function GeneratedWallpapersScreen({
     }).start();
   }, [fadeAnim]);
   useEffect(() => {
-    const storage = getStorage();
     Promise.all(jobImagePaths.map(async (path) => {
       const url = await getDownloadURL(ref(storage, path));
       return url;

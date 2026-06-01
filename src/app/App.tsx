@@ -11,6 +11,7 @@ import { colors } from "../constants/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { AuthenticatedHome } from "./AuthenticatedHome";
 import { GeneratedWallpapersScreen } from "./GeneratedWallpapersScreen";
+import { AuthScreen } from "./AuthScreen";
 
 type AppRoute =
   | { name: "home" }
@@ -42,14 +43,20 @@ export default function CozmicApp() {
     );
   }
 
-  // return user ? <AuthenticatedHome /> : <AuthScreen />;
-  return (
-    <AuthenticatedHome
-      onGenerationComplete={(images) =>
-        setRoute({ images, name: "generatedWallpapers" })
-      }
+  return user ? (
+      <AuthenticatedHome
+        onGenerationComplete={(images) =>
+          setRoute({ images, name: "generatedWallpapers" })
+        }
     />
-  );
+  ) : <AuthScreen />;
+  // return (
+  //   <AuthenticatedHome
+  //     onGenerationComplete={(images) =>
+  //       setRoute({ images, name: "generatedWallpapers" })
+  //     }
+  //   />
+  // );
 }
 
 const styles = StyleSheet.create({

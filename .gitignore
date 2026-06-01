@@ -7,4 +7,16 @@ src/constants/firebaseConfig.ts
 
 .env
 
+# .expo/devices.json
+/.expo/devices.json
+
 /test-images
+
+# agents
+.agents/*
+skills-lock.json
+
+
+# Firebase
+firebase-debug.log
+firestore-debug.log
