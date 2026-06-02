@@ -75,6 +75,8 @@ export function PromptComposer({
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [numberOfImages, setNumberOfImages] = useState("1");
   const [requestedResolution, setRequestedResolution] = useState<CreditCostMappingType>("1K");
+  const [startingError, setStartingError] = useState<string | null>(null);
+  const [processingError, setProcessingError] = useState<string | null>(null);
   const unsubscribeJobRef = useRef<Unsubscribe | null>(null);
   const isMountedRef = useRef<boolean>(true);
 
@@ -86,6 +88,8 @@ export function PromptComposer({
     return () => {
       isMountedRef.current = false;
       unsubscribeJobRef.current?.();
+      setStartingError(null);
+      setProcessingError(null);
     };
   }, []);
 
@@ -108,6 +112,8 @@ export function PromptComposer({
   };
 
   const handleGenerate = () => {
+    setStartingError(null);
+    setProcessingError(null);
     if (!prompt.trim() || isGenerating) {
       return;
     }
@@ -150,6 +156,7 @@ export function PromptComposer({
 
             if (job.status === "failed") {
               setGenerationStatus("failed");
+              setProcessingError(job.errorMessage);
               unsubscribeJobRef.current?.();
               unsubscribeJobRef.current = null;
             }
@@ -161,9 +168,10 @@ export function PromptComposer({
           },
         );
       })
-      .catch(() => {
+      .catch((reason) => {
         if (!isMountedRef.current) return;
         setGenerationStatus("failed");
+        setStartingError(reason.message);
       });
   };
 
@@ -287,7 +295,7 @@ export function PromptComposer({
               {generationStatusInfo.label}
             </Text>
             <Text style={styles.jobStatusMessage}>
-              {generationStatusInfo.message}
+              {startingError ?? processingError ?? generationStatusInfo.message}
             </Text>
             {activeJobId ? (
               <Text style={styles.jobStatusId}>Job {activeJobId}</Text>
