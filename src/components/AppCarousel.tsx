@@ -32,11 +32,14 @@ export default function AppCarousel({ data }: Readonly<{ data: ImageSourcePropTy
             )} 
                 width={width}
                 height={width / 2}
+                loop={false}
+                onProgressChange={progress}
             />
             <Pagination.Basic 
                 progress={progress} 
                 data={data}
-                dotStyle={{ backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 50 }}
+                dotStyle={{ backgroundColor: "rgba(120,120,120,0.8)", borderRadius: 50 }}
+                activeDotStyle={{ backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 50 }}
                 containerStyle={{ gap: 5, marginTop: 10 }}
                 onPress={onPressPagination}
             />
