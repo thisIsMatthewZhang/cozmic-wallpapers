@@ -5,7 +5,6 @@ import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateContentConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { VALID_ASPECT_RATIOS } from "./types/generation-job.js";
 import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
@@ -13,6 +12,7 @@ const db = getFirestore();
 const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
+const VALID_ASPECT_RATIOS = ["9:16" , "16:9" , "3:4" , "4:3" , "2:3" , "3:2" , "1:1"] as const;
 
 /**
  * 
@@ -64,7 +64,7 @@ export const startGenerationJob = onCall(
       throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K)."); 
     }
     
-    if (!(aspectRatio in VALID_ASPECT_RATIOS)) {
+    if (!(VALID_ASPECT_RATIOS.includes(aspectRatio))) {
       throw new HttpsError("invalid-argument", "Your device's aspect ratio is not supported."); 
     }
     
