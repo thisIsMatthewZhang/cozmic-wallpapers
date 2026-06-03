@@ -16,9 +16,11 @@ import type { Unsubscribe } from "firebase/firestore";
 import { db, functions } from "@/src/utils/firebase";
 import { colors, radii, typography } from "../constants/theme";
 import { CREDIT_COST_MAPPING } from "../constants/resolution-credit-mapping";
-
+import { CLOSEST_ASPECT_RATIO } from "../constants/deviceAspectRatio";
 
 type CreditCostMappingType = keyof typeof CREDIT_COST_MAPPING;
+const VALID_ASPECT_RATIOS = ["9:16" , "16:9" , "3:4" , "4:3" , "2:3" , "3:2" , "1:1"] as const;
+type AspectRatios = typeof VALID_ASPECT_RATIOS[number];
 type PromptComposerProps = {
   initialPrompt: string;
   onGenerationComplete: (images: string[]) => void;
@@ -123,11 +125,11 @@ export function PromptComposer({
     setActiveJobId(null);
 
     const startGenerationJob = httpsCallable<
-      { prompt: string; numberOfImages: number, requestedResolution: CreditCostMappingType },
+      { prompt: string; numberOfImages: number, requestedResolution: CreditCostMappingType, aspectRatio: AspectRatios },
       GenerationJobId
     >(functions, "startGenerationJob");
 
-    startGenerationJob({ prompt, numberOfImages: requestedImageCount, requestedResolution })
+    startGenerationJob({ prompt, numberOfImages: requestedImageCount, requestedResolution, aspectRatio: CLOSEST_ASPECT_RATIO })
       .then((result) => {
         if (!isMountedRef.current) return;
         const jobId = result.data.jobId;

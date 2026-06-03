@@ -5,6 +5,7 @@ import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
 import { GoogleGenAI, GenerateContentConfig } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { VALID_ASPECT_RATIOS } from "./types/generation-job.js";
 import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
@@ -21,7 +22,7 @@ const MAX_IMAGE_COUNT = 5;
  * @param model chosen model used to fulfill request and generate response
  * @returns GenerateImagesResponse object
  */
-async function createImage(prompt: string, { imageConfig = { imageSize: "1K", aspectRatio: "1:1" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
+async function createImage(prompt: string, { imageConfig = { imageSize: "1K", aspectRatio: "9:16" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
   const response = await ai.models.generateContent({
     model: model,
     contents: prompt,
@@ -47,15 +48,24 @@ export const startGenerationJob = onCall(
       throw new HttpsError("unauthenticated", "Sign in required.");
     }
 
-    const { prompt, numberOfImages } = req.data;
+    const { prompt, numberOfImages, requestedResolution, aspectRatio }: { 
+      prompt: string, 
+      numberOfImages: number, 
+      requestedResolution: keyof typeof CREDIT_COST_MAPPING, 
+      aspectRatio: typeof VALID_ASPECT_RATIOS[number]
+    } = req.data;
+
     if (typeof prompt !== "string" || !prompt.trim()) {
       throw new HttpsError("invalid-argument", "Prompt is required.");
     }
     if (!Number.isInteger(numberOfImages) || numberOfImages < MIN_IMAGE_COUNT || numberOfImages > MAX_IMAGE_COUNT) throw new HttpsError("invalid-argument", "Number of images must be between 1 to 5.");
     
-    const requestedResolution = req.data!.requestedResolution as keyof typeof CREDIT_COST_MAPPING;
     if (typeof requestedResolution !== "string" || !(requestedResolution in CREDIT_COST_MAPPING)) { 
-      throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K"); 
+      throw new HttpsError("invalid-argument", "Please select a valid output resolution (1K, 2K, or 4K)."); 
+    }
+    
+    if (!(aspectRatio in VALID_ASPECT_RATIOS)) {
+      throw new HttpsError("invalid-argument", "Your device's aspect ratio is not supported."); 
     }
     
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
@@ -65,7 +75,7 @@ export const startGenerationJob = onCall(
     
     const user = docSnapshot.data();
     if (!user) { 
-      throw new HttpsError("not-found", "No data found with your profile. Please reach out to support."); 
+      throw new HttpsError("not-found", "No data found with your profile."); 
     }
     if ((user.creditBalance ?? 0) < CREDIT_COST_MAPPING[requestedResolution] * numberOfImages) {
       throw new HttpsError("unavailable", "Not enough credits to generate image.");
@@ -80,6 +90,7 @@ export const startGenerationJob = onCall(
       numberOfImages,
       creditCost: CREDIT_COST_MAPPING[requestedResolution] * numberOfImages,
       status: "queued",
+      aspectRatio,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
