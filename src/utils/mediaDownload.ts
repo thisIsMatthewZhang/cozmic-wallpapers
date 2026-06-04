@@ -1,12 +1,21 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { addAssetsToAlbumAsync, createAssetAsync, requestPermissionsAsync, createAlbumAsync, Asset, Album } from 'expo-media-library';
 
+// Client Album Flow:
+// A temp directory is created (asks for permission) -> 
+// URLs are downloaded to the directory -> 
+// converts directory URLs into assets -> 
+// new album is created -> 
+// assets get added to the album -> 
+// temp directory gets deleted to avoid leaks between sessions
+
 /**
  * @description internal utility function for idempotently creating a directory
  * @param name name of directory to create
  * @returns directory instance
  */
-export function createNewDirectory(name: string): Directory {
+export async function createNewDirectory(name: string): Promise<Directory> {
+    await requestPermissionsAsync();
     const directory = new Directory(Paths.cache, name);
     directory.create({ idempotent: true });
     return directory;
@@ -34,7 +43,6 @@ export async function downloadFileToDirectory(url: string | null, directory: Dir
  * @returns new Album instance
  */
 export async function createNewAlbum(title: string, firstAsset: Asset) {
-  await requestPermissionsAsync();
   const newAlbum = await createAlbumAsync(title, firstAsset);
   return newAlbum;
 }

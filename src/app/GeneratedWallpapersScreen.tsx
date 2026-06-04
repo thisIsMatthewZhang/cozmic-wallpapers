@@ -43,6 +43,7 @@ export function GeneratedWallpapersScreen({
   const [albumName, setAlbumName] = useState("");
   const [images, setImages] = useState<ImageSourcePropType[]>([]); // URIs to pass to AppCarousel
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [creatingAlbumSpinner, setCreatingAlbumSpinner] = useState<boolean>(false);
   const [failedToDisplayImages, setFailedToDisplayImages] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -153,25 +154,42 @@ export function GeneratedWallpapersScreen({
                 bgColor={colors.panelSoft}
                 customStyle={styles.modalButton}
                 onPress={() => {
+                  if (creatingAlbumSpinner) return;
                   setAlbumName("");
                   setShowAlbumModal(false);
 
                 }}
+                pressableProps={{ disabled: creatingAlbumSpinner }}
                 textColor={colors.cloud}
                 title="Cancel"
               />
               <AppButton
                 bgColor={colors.cyan}
                 customStyle={styles.modalButton}
+                isLoading={creatingAlbumSpinner}
+                loadingColor={colors.void}
                 onPress={async () => {
-                  if (!albumName.trim() || !imageUrls.length) return;
-                  const directory = createNewDirectory(albumName);
-                  await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
-                  const assets = await createAssetsFromDirectory(directory);
-                  if (!assets.length) return;
-                  const newAlbum = await createNewAlbum(albumName.trim(), assets[0]);
-                  await addAssetsToAlbum(newAlbum, assets.slice(1));
-                  setShowAlbumModal(false);
+                  if (!albumName.trim() || !imageUrls.length || creatingAlbumSpinner) return;
+                  setCreatingAlbumSpinner(true);
+
+                  try {
+                    const directory = await createNewDirectory(albumName);
+                    await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
+                    const assets = await createAssetsFromDirectory(directory);
+                    if (!assets.length) return;
+                    const newAlbum = await createNewAlbum(albumName.trim(), assets[0]);
+                    await addAssetsToAlbum(newAlbum, assets.slice(1));
+                    directory.delete();
+                    setShowAlbumModal(false);
+                  } finally {
+                    if (isMountedRef.current) {
+                      setCreatingAlbumSpinner(false);
+                    }
+                  }
+                }}
+                pressableProps={{
+                  disabled:
+                    creatingAlbumSpinner || !albumName.trim() || !imageUrls.length,
                 }}
                 textColor={colors.void}
                 title="Confirm"
