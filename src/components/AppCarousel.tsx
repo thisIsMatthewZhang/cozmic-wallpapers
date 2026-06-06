@@ -23,7 +23,7 @@ export default function AppCarousel({ data }: Readonly<{ data: ImageSourcePropTy
 
     return (
         <View style={{ flex: 1 }}>
-            <Carousel 
+            <Carousel
                 data={data} 
                 renderItem={({item}) => (
                 <View style={{ borderWidth: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -31,7 +31,7 @@ export default function AppCarousel({ data }: Readonly<{ data: ImageSourcePropTy
                 </View>
             )} 
                 width={width}
-                height={width / 2}
+                height={450}
                 loop={false}
                 onProgressChange={progress}
             />
@@ -40,7 +40,7 @@ export default function AppCarousel({ data }: Readonly<{ data: ImageSourcePropTy
                 data={data}
                 dotStyle={{ backgroundColor: "rgba(120,120,120,0.8)", borderRadius: 50 }}
                 activeDotStyle={{ backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 50 }}
-                containerStyle={{ gap: 5, marginTop: 10 }}
+                containerStyle={{ marginTop: 5 }}
                 onPress={onPressPagination}
             />
         </View>
