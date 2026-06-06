@@ -50,13 +50,6 @@ export default function CozmicApp() {
         }
     />
   ) : <AuthScreen />;
-  // return (
-  //   <AuthenticatedHome
-  //     onGenerationComplete={(images) =>
-  //       setRoute({ images, name: "generatedWallpapers" })
-  //     }
-  //   />
-  // );
 }
 
 const styles = StyleSheet.create({

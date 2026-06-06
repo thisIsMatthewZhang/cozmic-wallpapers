@@ -85,6 +85,7 @@ export function GeneratedWallpapersScreen({
       await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
       await saveWallpapersToLibrary(directory);
       directory.delete();
+      onBack();
     } catch (error) {
       console.error(error);
       if (isMountedRef.current) {
