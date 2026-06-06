@@ -5,17 +5,15 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
 import AppButton from "@/src/components/AppButton";
 import AppCarousel from "@/src/components/AppCarousel";
-import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
 import { storage } from "@/src/utils/firebase";
-import { createNewDirectory, downloadFileToDirectory, createAssetsFromDirectory, createNewAlbum, addAssetsToAlbum } from "../utils/mediaDownload";
+import { createNewDirectory, downloadFileToDirectory, saveWallpapersToLibrary, askUserForPermission } from "../utils/mediaDownload";
 import { getDownloadURL, ref } from "firebase/storage";
 
 type GeneratedWallpapersScreenProps = {
@@ -39,12 +37,11 @@ export function GeneratedWallpapersScreen({
   onBack,
 }: Readonly<GeneratedWallpapersScreenProps>) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [showAlbumModal, setShowAlbumModal] = useState(false);
-  const [albumName, setAlbumName] = useState("");
   const [images, setImages] = useState<ImageSourcePropType[]>([]); // URIs to pass to AppCarousel
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [creatingAlbumSpinner, setCreatingAlbumSpinner] = useState<boolean>(false);
-  const [failedToDisplayImages, setFailedToDisplayImages] = useState(false);
+  const [showSavingSpinner, setShowSavingSpinner] = useState<boolean>(false);
+  const [failedToDisplayImages, setFailedToDisplayImages] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string>("");
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -75,6 +72,32 @@ export function GeneratedWallpapersScreen({
       isMountedRef.current = false;
     };
   }, [jobImagePaths]);
+
+  const handleSaveToPhotos = async () => {
+    if (!imageUrls.length || showSavingSpinner) return;
+
+    setShowSavingSpinner(true);
+    setSaveError("");
+
+    try {
+      await askUserForPermission();
+      const directory = await createNewDirectory("cozmic-wallpapers");
+      await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
+      await saveWallpapersToLibrary(directory);
+      directory.delete();
+    } catch (error) {
+      console.error(error);
+      if (isMountedRef.current) {
+        setSaveError(
+          error instanceof Error ? error.message : "Failed to save wallpapers to Photos.",
+        );
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setShowSavingSpinner(false);
+      }
+    }
+  };
 
   return (
     <>
@@ -125,79 +148,19 @@ export function GeneratedWallpapersScreen({
           <AppButton
             bgColor={colors.cyan}
             customStyle={styles.saveButton}
-            onPress={() => setShowAlbumModal(true)}
+            isLoading={showSavingSpinner}
+            loadingColor={colors.void}
+            onPress={handleSaveToPhotos}
             textColor={colors.void}
             textStyle={styles.saveButtonLabel}
-            title="Save to New Album"
-            pressableProps={{ disabled: !imageUrls.length }}
+            title="Save to Photos"
+            pressableProps={{ disabled: showSavingSpinner || !imageUrls.length }}
           />
+          {saveError ? (
+            <Text style={styles.errorText}>{saveError}</Text>
+          ) : null}
         </Animated.View>
       </ScreenShell>
-      <ReusableModal
-        showModal={showAlbumModal}
-        setShowModal={setShowAlbumModal}
-        modalProps={{ animationType: "fade", transparent: true }}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalPanel}>
-            <Text style={styles.modalTitle}>New album</Text>
-            <TextInput
-              autoFocus
-              placeholder="Album name"
-              placeholderTextColor={colors.mist}
-              value={albumName}
-              onChangeText={setAlbumName}
-              style={styles.albumInput}
-            />
-            <View style={styles.modalActions}>
-              <AppButton
-                bgColor={colors.panelSoft}
-                customStyle={styles.modalButton}
-                onPress={() => {
-                  if (creatingAlbumSpinner) return;
-                  setAlbumName("");
-                  setShowAlbumModal(false);
-
-                }}
-                pressableProps={{ disabled: creatingAlbumSpinner }}
-                textColor={colors.cloud}
-                title="Cancel"
-              />
-              <AppButton
-                bgColor={colors.cyan}
-                customStyle={styles.modalButton}
-                isLoading={creatingAlbumSpinner}
-                loadingColor={colors.void}
-                onPress={async () => {
-                  if (!albumName.trim() || !imageUrls.length || creatingAlbumSpinner) return;
-                  setCreatingAlbumSpinner(true);
-
-                  try {
-                    const directory = await createNewDirectory(albumName);
-                    await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
-                    const assets = await createAssetsFromDirectory(directory);
-                    if (!assets.length) return;
-                    const newAlbum = await createNewAlbum(albumName.trim(), assets[0]);
-                    await addAssetsToAlbum(newAlbum, assets.slice(1));
-                    directory.delete();
-                    setShowAlbumModal(false);
-                  } finally {
-                    if (isMountedRef.current) {
-                      setCreatingAlbumSpinner(false);
-                    }
-                  }
-                }}
-                pressableProps={{
-                  disabled:
-                    creatingAlbumSpinner || !albumName.trim() || !imageUrls.length,
-                }}
-                textColor={colors.void}
-                title="Confirm"
-              />
-            </View>
-          </View>
-        </View>
-      </ReusableModal>
     </>
   );
 }
@@ -297,44 +260,9 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: "900",
   },
-  modalBackdrop: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    backgroundColor: colors.overlay,
-    paddingHorizontal: 20,
-    paddingTop: 144,
-  },
-  modalPanel: {
-    width: "100%",
-    gap: 14,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    backgroundColor: colors.midnight,
-    padding: 18,
-  },
-  modalTitle: {
-    color: colors.white,
-    fontSize: typography.section,
-    fontWeight: "900",
-  },
-  albumInput: {
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    backgroundColor: colors.night,
-    color: colors.white,
+  errorText: {
+    color: colors.coral,
     fontSize: typography.body,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
+    lineHeight: 21,
   },
 });

@@ -1,13 +1,9 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { addAssetsToAlbumAsync, createAssetAsync, requestPermissionsAsync, createAlbumAsync, Asset, Album } from 'expo-media-library';
+import { saveToLibraryAsync, requestPermissionsAsync } from 'expo-media-library';
 
-// Client Album Flow:
-// A temp directory is created (asks for permission) -> 
-// URLs are downloaded to the directory -> 
-// converts directory URLs into assets -> 
-// new album is created -> 
-// assets get added to the album -> 
-// temp directory gets deleted to avoid leaks between sessions
+// Client save flow:
+// A temp directory is created -> URLs are downloaded to the directory ->
+// files are saved to the user's media library -> temp directory is deleted.
 
 /**
  * @description internal utility function for idempotently creating a directory
@@ -15,7 +11,6 @@ import { addAssetsToAlbumAsync, createAssetAsync, requestPermissionsAsync, creat
  * @returns directory instance
  */
 export async function createNewDirectory(name: string): Promise<Directory> {
-    await requestPermissionsAsync();
     const directory = new Directory(Paths.cache, name);
     directory.create({ idempotent: true });
     return directory;
@@ -38,32 +33,21 @@ export async function downloadFileToDirectory(url: string | null, directory: Dir
 }
 
 /**
- * @description IMPORTANT: Android requires an album to hold at least one asset. Account for this case when deploying to Android
- * @param title name for newly created album
- * @returns new Album instance
- */
-export async function createNewAlbum(title: string, firstAsset: Asset) {
-  const newAlbum = await createAlbumAsync(title, firstAsset);
-  return newAlbum;
-}
-
-/**
- * @description creates media library assets for each file in a directory
+ * @description saves each file in a directory to the user's media library
  * @param directory directory containing files to convert into assets
- * @returns media library assets created from the directory contents
  */
-export async function createAssetsFromDirectory(directory: Directory): Promise<Asset[]> {
-  return Promise.all(
-    directory.list().map((file) => createAssetAsync(file.uri)),
+export async function saveWallpapersToLibrary(directory: Directory): Promise<void> {
+  await Promise.all(
+    directory.list().map((file) => saveToLibraryAsync(file.uri)),
   );
 }
 
 /**
- * @description adds existing media library assets to the provided album
- * @param album album to add assets to
- * @param assets assets to add to the album
+ * @description simple function called before album creation flow to ask user for media library permissions.
+ * @returns PermissionResponse given by the async call
  */
-export async function addAssetsToAlbum(album: Album, assets: Asset[]) {
-  if (!album || !assets.length) return;
-  await addAssetsToAlbumAsync(assets, album);
+export async function askUserForPermission() {
+  const permissionResponse = await requestPermissionsAsync(true);
+  if (!permissionResponse.granted) throw new Error("Media library permission is required to save wallpapers.");
+  return permissionResponse;
 }
