@@ -50,7 +50,7 @@ const generationStatusCopy: Record<
   },
   processing: {
     label: "Processing",
-    message: "Gemini is building your cosmic wallpaper now.",
+    message: "Your cosmic wallpaper is being created now.",
   },
   complete: {
     label: "Complete",
@@ -299,9 +299,6 @@ export function PromptComposer({
             <Text style={styles.jobStatusMessage}>
               {startingError ?? processingError ?? generationStatusInfo.message}
             </Text>
-            {activeJobId ? (
-              <Text style={styles.jobStatusId}>Job {activeJobId}</Text>
-            ) : null}
           </View>
         </View>
       ) : null}
