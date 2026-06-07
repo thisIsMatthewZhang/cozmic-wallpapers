@@ -3,7 +3,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
-import { GoogleGenAI, GenerateContentConfig } from "@google/genai";
+import { COZMIC_WALLPAPER_CONTEXT } from "./system-prompt.js";
+import { GoogleGenAI, GenerateContentConfig, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
@@ -16,17 +17,36 @@ const VALID_ASPECT_RATIOS = ["9:16" , "16:9" , "3:4" , "4:3" , "2:3" , "3:2" , "
 
 /**
  * 
- * @param prompt user-provided prompt message describing the image(s)
+ * @param userPrompt user-provided prompt message describing the image(s) to generate
  * @param param2 destructured object literal with individual property defaults set for GenerateImagesParameters.config
  * @param ai Google GenAI client for the application
  * @param model chosen model used to fulfill request and generate response
  * @returns GenerateImagesResponse object
  */
-async function createImage(prompt: string, { imageConfig = { imageSize: "1K", aspectRatio: "9:16" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
+async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K", aspectRatio: "9:16" } }: GenerateContentConfig = {}, ai: GoogleGenAI = GENAI_CLIENT, model: Model = NANO_BANANA) {
   const response = await ai.models.generateContent({
     model: model,
-    contents: prompt,
+    contents: userPrompt,
     config: {
+      systemInstruction: COZMIC_WALLPAPER_CONTEXT,
+      safetySettings: [
+        { 
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, 
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        }
+      ],
       responseModalities: ["IMAGE"],
       imageConfig: {
         imageSize: imageConfig.imageSize,
@@ -34,6 +54,13 @@ async function createImage(prompt: string, { imageConfig = { imageSize: "1K", as
       } 
     }
   });
+  if (response.promptFeedback?.blockReason) {
+    throw new Error("This prompt could not be used to create a wallpaper.");
+  }
+  const blockedCandidate = response.candidates?.some(candidate => candidate.finishReason === "SAFETY");
+  if (blockedCandidate) {
+    throw new Error("This wallpaper request was blocked by safety filters.");
+  }
   return response;
 }
 
