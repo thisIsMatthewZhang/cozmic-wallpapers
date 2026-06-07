@@ -34,7 +34,7 @@ export async function downloadFileToDirectory(url: string | null, directory: Dir
 
 /**
  * @description saves each file in a directory to the user's media library
- * @param directory directory containing files to convert into assets
+ * @param directory directory containing files to save to library
  */
 export async function saveWallpapersToLibrary(directory: Directory): Promise<void> {
   await Promise.all(

@@ -10,6 +10,7 @@ import {
 
 import AppButton from "@/src/components/AppButton";
 import AppCarousel from "@/src/components/AppCarousel";
+import SuccessfulSaveAnimation from "../components/SuccessfulSaveAnimation";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { colors, radii, typography } from "@/src/constants/theme";
 import { storage } from "@/src/utils/firebase";
@@ -41,6 +42,7 @@ export function GeneratedWallpapersScreen({
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [showSavingSpinner, setShowSavingSpinner] = useState<boolean>(false);
   const [failedToDisplayImages, setFailedToDisplayImages] = useState<boolean>(false);
+  const [displaySuccessAnim, setDisplaySuccessAnim] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string>("");
   const isMountedRef = useRef(true);
 
@@ -85,7 +87,8 @@ export function GeneratedWallpapersScreen({
       await Promise.all(imageUrls.map(url => downloadFileToDirectory(url, directory)));
       await saveWallpapersToLibrary(directory);
       directory.delete();
-      onBack();
+      setDisplaySuccessAnim(true);
+      setTimeout(onBack, 4500);
     } catch (error) {
       console.error(error);
       if (isMountedRef.current) {
@@ -136,6 +139,8 @@ export function GeneratedWallpapersScreen({
               </Text>
             </View>
           )}
+
+          {displaySuccessAnim ? <SuccessfulSaveAnimation /> : null}
 
           <View style={styles.summaryPanel}>
             <Text style={styles.summaryValue}>{images.length}</Text>
