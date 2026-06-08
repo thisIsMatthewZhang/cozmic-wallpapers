@@ -171,6 +171,11 @@ export const startGenerationJob = onCall(
       aspectRatio,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+      usage: {
+        candidateOutputTokens: 0,
+        thoughtTokens: 0,
+        totalTokens: 0
+      }
     });
 
     return { jobId: jobRef.id };
@@ -255,7 +260,7 @@ export const processGenerationJob = onDocumentCreated(
         usage: {
           candidateOutputTokens: candidateOutputTokens === 0 ? null : candidateOutputTokens,
           thoughtTokens: thoughtTokens === 0 ? null : thoughtTokens,
-          totalTokens: totalTokens === 0 ? null : thoughtTokens
+          totalTokens: totalTokens === 0 ? null : totalTokens
         }
       });
     });
