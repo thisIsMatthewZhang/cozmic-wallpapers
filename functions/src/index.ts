@@ -194,6 +194,9 @@ export const processGenerationJob = onDocumentCreated(
       status: 'processing',
       updatedAt: FieldValue.serverTimestamp()
     });
+    let candidateOutputTokens = 0;
+    let thoughtTokens = 0;
+    let totalTokens = 0;
     const imagePaths = await Promise.all(
       Array.from({ length: data.numberOfImages }, async (_, index) => {
         const response = await createImage(data.prompt, {
@@ -230,6 +233,15 @@ export const processGenerationJob = onDocumentCreated(
             }
           }
         });
+        if (response?.usageMetadata?.candidatesTokenCount) {
+          candidateOutputTokens += response.usageMetadata.candidatesTokenCount;
+        }
+        if (response?.usageMetadata?.thoughtsTokenCount) {
+          thoughtTokens += response.usageMetadata.thoughtsTokenCount;
+        }        
+        if (response?.usageMetadata?.totalTokenCount) {
+          totalTokens += response.usageMetadata.totalTokenCount;
+        }
         return imagePath;
       })
     );
@@ -239,7 +251,12 @@ export const processGenerationJob = onDocumentCreated(
       await event.data?.ref.update({
         status: 'complete',
         updatedAt: FieldValue.serverTimestamp(),
-        imagePaths // image references stored to Firestore
+        imagePaths, // image references stored to Firestore
+        usage: {
+          candidateOutputTokens: candidateOutputTokens === 0 ? null : candidateOutputTokens,
+          thoughtTokens: thoughtTokens === 0 ? null : thoughtTokens,
+          totalTokens: totalTokens === 0 ? null : thoughtTokens
+        }
       });
     });
   }

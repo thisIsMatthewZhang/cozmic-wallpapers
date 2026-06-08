@@ -8,6 +8,11 @@ export type GenerationJob = {
   resolution: string;
   numberOfImages: number;
   creditCost: number;
+  usage: {
+    candidateOutputTokens: number | null;
+    thoughtTokens: number | null;
+    totalTokens: number | null;
+  };
   aspectRatio: keyof typeof VALID_ASPECT_RATIOS,
   status: GenerationJobStatus;
   createdAt: FirebaseFirestore.Timestamp | FirebaseFirestore.FieldValue;
