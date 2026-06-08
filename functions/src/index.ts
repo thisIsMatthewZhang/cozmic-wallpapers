@@ -1,10 +1,11 @@
 import { initializeApp } from "firebase-admin/app";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
-import { GENAI_CLIENT, NANO_BANANA, Model } from './gemini-client.js';
+import { GENAI_CLIENT, NANO_BANANA, PREFLIGHT_MODEL, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
+import { PreflightPromptClassifier } from "./types/preflight-prompt-classifier.js";
 import { COZMIC_WALLPAPER_CONTEXT } from "./system-prompt.js";
-import { GoogleGenAI, GenerateContentConfig, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, GenerateContentConfig, HarmCategory, HarmBlockThreshold, Type, SafetySetting } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
@@ -14,6 +15,76 @@ const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
 const VALID_ASPECT_RATIOS = ["9:16" , "16:9" , "3:4" , "4:3" , "2:3" , "3:2" , "1:1"] as const;
+const SAFETY_SETTINGS: SafetySetting[] = [
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+        }
+      ] as const;
+
+async function classifyPreflightPrompt(userPrompt: string, ai: GoogleGenAI = GENAI_CLIENT): Promise<PreflightPromptClassifier> {
+  const prompt = userPrompt.trim();
+  if (!prompt) {
+    return { allowed: false, reason: "Prompt is required.", prompt: null };
+  }
+  if (prompt.length > 2000) {
+    return { allowed: false, reason: "Prompt is too long.", prompt: null };
+  }
+
+  const response = await ai.models.generateContent({
+    model: PREFLIGHT_MODEL,
+    contents: prompt,
+    config: {
+      systemInstruction:
+        "Classify whether this user prompt is safe and suitable for AI wallpaper generation. " +
+        "Reject requests for explicit sexual content, nudity, minors in sexual contexts, graphic violence, gore, hate, harassment, self-harm, illegal acts, weapons instructions, or evasion of safety rules. " +
+        "Return only JSON matching the schema. If allowed, optionally provide a concise cleaned prompt preserving the user's intent.",
+      temperature: 0,
+      maxOutputTokens: 120,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          allowed: { type: Type.BOOLEAN },
+          reason: { type: Type.STRING },
+          prompt: { type: Type.STRING, nullable: true }
+        },
+        required: ["allowed", "reason"]
+      },
+      safetySettings: SAFETY_SETTINGS
+    }
+  });
+  if (response.promptFeedback?.blockReason || response.candidates?.some(candidate => candidate.finishReason === "SAFETY")) {
+    return { allowed: false, reason: "This prompt is not allowed.", prompt: null };
+  }
+  try {
+    const text = response.text?.trim();
+    if (!text) {
+      return { allowed: false, reason: "Unable to classify prompt.", prompt: null };
+    }
+
+    const result = JSON.parse(text) as Partial<PreflightPromptClassifier>;
+    return {
+      allowed: result.allowed === true,
+      reason: typeof result.reason === "string" ? result.reason : "",
+      prompt: typeof result.prompt === "string" && result.prompt.trim() ? result.prompt.trim() : prompt
+    };
+  } catch {
+    return { allowed: false, reason: "Unable to classify prompt.", prompt: null };
+  }
+}
 
 /**
  * 
@@ -29,24 +100,6 @@ async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K"
     contents: userPrompt,
     config: {
       systemInstruction: COZMIC_WALLPAPER_CONTEXT,
-      safetySettings: [
-        { 
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, 
-          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
-        }
-      ],
       responseModalities: ["IMAGE"],
       imageConfig: {
         imageSize: imageConfig.imageSize,
@@ -54,13 +107,6 @@ async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K"
       } 
     }
   });
-  if (response.promptFeedback?.blockReason) {
-    throw new Error("This prompt could not be used to create a wallpaper.");
-  }
-  const blockedCandidate = response.candidates?.some(candidate => candidate.finishReason === "SAFETY");
-  if (blockedCandidate) {
-    throw new Error("This wallpaper request was blocked by safety filters.");
-  }
   return response;
 }
 
@@ -94,6 +140,11 @@ export const startGenerationJob = onCall(
     if (!(VALID_ASPECT_RATIOS.includes(aspectRatio))) {
       throw new HttpsError("invalid-argument", "Your device's aspect ratio is not supported."); 
     }
+
+    const preflight = await classifyPreflightPrompt(prompt);
+    if (!preflight.allowed) {
+      throw new HttpsError("invalid-argument", preflight.reason || "This prompt is not allowed.");
+    }
     
     const docSnapshot = await db.doc(`users/${req.auth.uid}`).get();
     if (!docSnapshot.exists) { 
@@ -112,7 +163,7 @@ export const startGenerationJob = onCall(
     await jobRef.set({
       jobId: jobRef.id,
       uid: req.auth.uid,
-      prompt,
+      prompt: preflight.prompt ?? prompt,
       resolution: requestedResolution,
       numberOfImages,
       creditCost: CREDIT_COST_MAPPING[requestedResolution] * numberOfImages,
