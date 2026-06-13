@@ -1,9 +1,30 @@
 import type { ExpoConfig } from "expo/config";
 
+// {
+//   "expo": {
+//     "plugins": [
+//       [
+//         "expo-iap",
+//         {
+//           "iapkitApiKey": "openiap-kit_<your-key>",
+//           "modules": {
+//             "onside": true,
+//             "horizon": true
+//           },
+//           "google": {
+//             "horizonAppId": "YOUR_HORIZON_APP_ID"
+//           }
+//         }
+//       ]
+//     ]
+//   }
+// }
+
 const config: ExpoConfig = {
   name: "Cozmic Wallpapers",
   slug: "cozmic-wallpapers",
   orientation: "portrait",
+  plugins: ["expo-iap"],
   ios: {
     supportsTablet: true,
     googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",

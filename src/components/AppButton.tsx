@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 export interface ButtonProps {
+  key?: React.Key | null;
   title: string;
   bgColor: ColorValue;
   textColor: ColorValue;
@@ -23,11 +24,12 @@ export interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   pressableProps?: Omit<
     ComponentPropsWithoutRef<typeof Pressable>,
-    "onPress" | "style"
+    "onPress" | "style" | "key"
   >;
 }
 
 export default function AppButton({
+  key,
   title,
   bgColor,
   textColor,
@@ -42,6 +44,7 @@ export default function AppButton({
 
   return (
     <Pressable
+      key={key}
       style={({ pressed }) => {
         return [
           {

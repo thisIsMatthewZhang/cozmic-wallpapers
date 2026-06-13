@@ -35,7 +35,7 @@ type AuthenticatedHomeProps = {
 export function AuthenticatedHome({
   onGenerationComplete,
 }: Readonly<AuthenticatedHomeProps>) {
-  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [showPacksModal, setShowPacksModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
@@ -56,21 +56,21 @@ export function AuthenticatedHome({
           <View style={styles.topActions}>
             <AppButton
               bgColor={
-                showPlansModal
+                showPacksModal
                   ? "rgba(114, 228, 255, 0.12)"
                   : colors.panelSoft
               }
               customStyle={[
                 styles.topButton,
-                showPlansModal && styles.topButtonActive,
+                showPacksModal && styles.topButtonActive,
               ]}
-              onPress={() => setShowPlansModal(true)}
-              textColor={showPlansModal ? colors.cyan : colors.cloud}
+              onPress={() => setShowPacksModal(true)}
+              textColor={showPacksModal ? colors.cyan : colors.cloud}
               textStyle={[
                 styles.topButtonLabel,
-                showPlansModal && styles.topButtonLabelActive,
+                showPacksModal && styles.topButtonLabelActive,
               ]}
-              title="Plans"
+              title="Credit Packs"
             />
             <AppButton
               bgColor={colors.panelSoft}
@@ -217,8 +217,8 @@ export function AuthenticatedHome({
         </View>
       </ScreenShell>
       <ReusableModal
-        showModal={showPlansModal}
-        setShowModal={setShowPlansModal}
+        showModal={showPacksModal}
+        setShowModal={setShowPacksModal}
         modalProps={{
           transparent: true,
           presentationStyle: "overFullScreen",
@@ -228,11 +228,11 @@ export function AuthenticatedHome({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close download plans"
-            onPress={() => setShowPlansModal(false)}
+            onPress={() => setShowPacksModal(false)}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.modalSheet}>
-            <DownloadPlansScreen onClose={() => setShowPlansModal(false)} />
+            <DownloadPlansScreen onClose={() => setShowPacksModal(false)} />
           </View>
         </View>
       </ReusableModal>
