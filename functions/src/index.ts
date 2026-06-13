@@ -1,19 +1,31 @@
 import { initializeApp } from "firebase-admin/app";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
+import { defineInt } from "firebase-functions/params";
 import { GENAI_CLIENT, NANO_BANANA, PREFLIGHT_MODEL, Model } from './gemini-client.js';
 import { CREDIT_COST_MAPPING } from "./resolution-credit-mapping.js";
 import { PreflightPromptClassifier } from "./types/preflight-prompt-classifier.js";
+import { CREDIT_PLANS, PRODUCT_IDS } from "./types/credit-plan.js";
 import { COZMIC_WALLPAPER_CONTEXT } from "./system-prompt.js";
 import { GoogleGenAI, GenerateContentConfig, HarmCategory, HarmBlockThreshold, Type, SafetySetting } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { Environment, SignedDataVerifier, Type as AppleProductType } from "@apple/app-store-server-library";
+import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 initializeApp();
 const db = getFirestore();
 const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
+const APPLE_APP_ID = defineInt("APPLE_APP_ID");
+const APPLE_BUNDLE_ID = "app.wallpapers.cozmic";
+const APPLE_ROOT_CERTIFICATES = [
+  "AppleIncRootCertificate.cer",
+  "AppleRootCA-G2.cer",
+  "AppleRootCA-G3.cer",
+].map((fileName) => readFileSync(new URL(`../certs/${fileName}`, import.meta.url)));
 const VALID_ASPECT_RATIOS = ["9:16" , "16:9" , "3:4" , "4:3" , "2:3" , "3:2" , "1:1"] as const;
 const SAFETY_SETTINGS: SafetySetting[] = [
         {
@@ -266,3 +278,135 @@ export const processGenerationJob = onDocumentCreated(
     });
   }
 );
+
+export const verifyAppleIAP = onCall(
+  { region: "us-central1", enforceAppCheck: false },
+  async (req) => {
+    if (!req.auth) {
+      throw new HttpsError("unauthenticated", "Sign in required.");
+    }
+    const uid = req.auth.uid;
+    const { productId, transactionId, purchaseToken } = req.data ?? {};
+    if (!isProductId(productId) || typeof transactionId !== "string" || !transactionId || typeof purchaseToken !== "string" || !purchaseToken) {
+      throw new HttpsError("invalid-argument", "Valid Apple purchase data is required.");
+    }
+
+    const userRef = db.doc(`users/${uid}`);
+    const userSnapshot = await userRef.get();
+    const appAccountToken = userSnapshot.data()?.appleAppAccountToken;
+    if (!userSnapshot.exists || typeof appAccountToken !== "string") {
+      throw new HttpsError("failed-precondition", "Apple purchase context is not initialized.");
+    }
+
+    let decodedTransaction;
+    try {
+      const environment = getAppleTransactionEnvironment(purchaseToken);
+      const verifier = new SignedDataVerifier(
+        APPLE_ROOT_CERTIFICATES,
+        true,
+        environment,
+        APPLE_BUNDLE_ID,
+        environment === Environment.PRODUCTION ? APPLE_APP_ID.value() : undefined,
+      );
+      decodedTransaction = await verifier.verifyAndDecodeTransaction(purchaseToken);
+    } catch (error) {
+      console.error("Apple transaction verification failed", error);
+      throw new HttpsError("permission-denied", "Apple could not verify this purchase.");
+    }
+
+    if (
+      decodedTransaction.productId !== productId ||
+      decodedTransaction.transactionId !== transactionId ||
+      decodedTransaction.appAccountToken?.toLowerCase() !== appAccountToken.toLowerCase() ||
+      decodedTransaction.type !== AppleProductType.CONSUMABLE ||
+      decodedTransaction.quantity !== 1 ||
+      decodedTransaction.revocationDate !== undefined
+    ) {
+      throw new HttpsError("permission-denied", "Apple purchase details did not match this request.");
+    }
+
+    const credits = CREDIT_PLANS[productId].credits;
+    const paymentRef = db.doc(`payments/${transactionId}`);
+    const alreadyFulfilled = await db.runTransaction(async (transaction) => {
+      const [freshUserSnapshot, paymentSnapshot] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(paymentRef),
+      ]);
+
+      if (!freshUserSnapshot.exists) {
+        throw new HttpsError("not-found", "User profile was not found.");
+      }
+      if (paymentSnapshot.exists) {
+        if (paymentSnapshot.data()?.uid !== uid) {
+          throw new HttpsError("permission-denied", "This Apple transaction was already claimed.");
+        }
+        return true;
+      }
+
+      transaction.update(userRef, {
+        creditBalance: FieldValue.increment(credits),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(paymentRef, {
+        paymentId: transactionId,
+        provider: "apple",
+        uid,
+        productId,
+        credits,
+        environment: decodedTransaction.environment ?? null,
+        purchaseDate: decodedTransaction.purchaseDate ?? null,
+        fulfilledAt: FieldValue.serverTimestamp(),
+      });
+      return false;
+    });
+
+    return { verified: true, alreadyFulfilled, credits };
+  }
+);
+
+export const prepareAppleIAP = onCall(
+  { region: "us-central1", enforceAppCheck: false },
+  async (req) => {
+    if (!req.auth) {
+      throw new HttpsError("unauthenticated", "Sign in required.");
+    }
+
+    const userRef = db.doc(`users/${req.auth.uid}`);
+    const appAccountToken = await db.runTransaction(async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+      if (!userSnapshot.exists) {
+        throw new HttpsError("not-found", "User profile was not found.");
+      }
+
+      const existingToken = userSnapshot.data()?.appleAppAccountToken;
+      if (typeof existingToken === "string" && existingToken) {
+        return existingToken;
+      }
+
+      const token = randomUUID();
+      transaction.update(userRef, {
+        appleAppAccountToken: token,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return token;
+    });
+
+    return { appAccountToken };
+  },
+);
+
+function isProductId(value: unknown): value is typeof PRODUCT_IDS[number] {
+  return typeof value === "string" && PRODUCT_IDS.some(id => id === value);
+}
+
+function getAppleTransactionEnvironment(signedTransaction: string): Environment {
+  try {
+    const payload = signedTransaction.split(".")[1];
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { environment?: unknown };
+    if (decoded.environment === Environment.PRODUCTION) return Environment.PRODUCTION;
+    if (decoded.environment === Environment.SANDBOX) return Environment.SANDBOX;
+  } catch {
+    // The signed payload is fully validated immediately after this routing check.
+  }
+  throw new HttpsError("invalid-argument", "Unsupported Apple transaction environment.");
+}
