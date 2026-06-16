@@ -4,7 +4,6 @@ export const creditPlans: CreditPlan[] = [
   {
     id: "planet",
     name: "Planet Pack",
-    price: "$3.99",
     credits: 60,
     description: "A starter pack for testing prompts and saving a small set of finished wallpapers.",
     accent: "#72E4FF",
@@ -17,7 +16,6 @@ export const creditPlans: CreditPlan[] = [
   {
     id: "star",
     name: "Star Pack",
-    price: "$7.99",
     credits: 180,
     description: "A balanced pack for weekly cosmic wallpaper creation and remixing.",
     badge: "Best value",
@@ -31,7 +29,6 @@ export const creditPlans: CreditPlan[] = [
   {
     id: "galaxy",
     name: "Galaxy Pack",
-    price: "$14.99",
     credits: 420,
     description: "A larger credit bank for collectors, batches, and higher-resolution experiments.",
     accent: "#FF8C7A",
@@ -44,7 +41,6 @@ export const creditPlans: CreditPlan[] = [
   {
     id: "universe",
     name: "Universe Pack",
-    price: "$29.99",
     credits: 900,
     description: "The deepest pack for frequent creators and max-resolution wallpaper collections.",
     accent: "#7EF7C6",

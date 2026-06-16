@@ -1,10 +1,15 @@
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { doc, onSnapshot } from "firebase/firestore";
 
 import AppButton from "../components/AppButton";
 import { SectionHeader } from "../components/SectionHeader";
+import Store, { type StoreRenderProps } from "../components/Store";
 import { creditPlans } from "../constants/creditPlans";
 import { colors, radii, typography } from "../constants/theme";
+import { useAuth } from "../contexts/AuthContext";
 import type { CreditPlan } from "../types/wallpaper";
+import { db } from "../utils/firebase";
 
 type DownloadPlansScreenProps = {
   onClose: () => void;
@@ -16,7 +21,16 @@ const resolutionCosts = [
   { label: "4K", credits: 12 },
 ];
 
-function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
+type PlanCardProps = {
+  plan: CreditPlan;
+  store: StoreRenderProps;
+};
+
+function PlanCard({ plan, store }: Readonly<PlanCardProps>) {
+  const isAvailable = store.productAvailable(plan.id);
+  const price = store.localizedPrices[plan.id] ?? (store.productsLoaded ? "Unavailable" : "Loading...");
+  const isPurchasing = store.purchasingProductId === plan.id;
+
   return (
     <View style={[styles.planCard, { borderColor: plan.accent }]}>
       <View style={styles.planHeader}>
@@ -32,7 +46,7 @@ function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
       </View>
 
       <View style={styles.priceRow}>
-        <Text style={styles.price}>{plan.price}</Text>
+        <Text style={styles.price}>{price}</Text>
         <Text style={styles.creditTotal}>{plan.credits} credits</Text>
       </View>
 
@@ -59,17 +73,32 @@ function PlanCard({ plan }: Readonly<{ plan: CreditPlan }>) {
       <AppButton
         bgColor={colors.cyan}
         customStyle={({ pressed }) => [styles.planButton, pressed && styles.pressed]}
-        onPress={() => undefined}
+        isLoading={isPurchasing}
+        onPress={() => void store.purchaseProduct(plan.id)}
+        pressableProps={{ disabled: !store.connected || !isAvailable || store.purchasingProductId !== null }}
         textColor={colors.ink}
         textStyle={styles.planButtonText}
-        title="Choose package"
+        title={isAvailable ? "Choose pack" : store.productsLoaded ? "Unavailable" : "Loading..."}
       />
     </View>
   );
 }
 
 export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenProps>) {
+  const { user } = useAuth();
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+      const balance = snapshot.data()?.creditBalance;
+      setCreditBalance(typeof balance === "number" ? balance : 0);
+    });
+  }, [user]);
+
   return (
+    <Store>
+      {(store) => (
     <ScrollView
       contentContainerStyle={styles.modalContent}
       showsVerticalScrollIndicator={false}
@@ -84,8 +113,10 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
           title="Close"
         />
         <View style={styles.balancePill}>
-          <Text style={styles.balanceLabel}>Dummy balance</Text>
-          <Text style={styles.balanceValue}>84 credits</Text>
+          <Text style={styles.balanceLabel}>Balance</Text>
+          <Text style={styles.balanceValue}>
+            {creditBalance === null ? "Loading..." : `${creditBalance} credits`}
+          </Text>
         </View>
       </View>
 
@@ -117,10 +148,17 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
         />
         <View style={styles.planList}>
           {creditPlans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
+            <PlanCard key={plan.id} plan={plan} store={store} />
           ))}
         </View>
       </View>
+
+      {store.errorMessage ? (
+        <Text style={styles.errorMessage}>{store.errorMessage}</Text>
+      ) : null}
+      {store.successMessage ? (
+        <Text style={styles.successMessage}>{store.successMessage}</Text>
+      ) : null}
 
       <View style={styles.notePanel}>
         <Text style={styles.noteTitle}>How the wallet could work</Text>
@@ -129,6 +167,8 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
         </Text>
       </View>
     </ScrollView>
+      )}
+    </Store>
   );
 }
 
@@ -361,6 +401,18 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.86,
+  },
+  errorMessage: {
+    color: colors.coral,
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  successMessage: {
+    color: colors.success,
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
   },
   notePanel: {
     borderRadius: radii.lg,

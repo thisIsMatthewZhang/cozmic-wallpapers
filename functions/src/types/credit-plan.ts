@@ -10,7 +10,6 @@ export const CREDIT_PLANS = {
 export type CreditPlan = {
   id: typeof PRODUCT_IDS[number];
   name: string;
-  price: string;
   credits: number;
   description: string;
   badge?: string;

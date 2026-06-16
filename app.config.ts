@@ -1,25 +1,5 @@
 import type { ExpoConfig } from "expo/config";
 
-// {
-//   "expo": {
-//     "plugins": [
-//       [
-//         "expo-iap",
-//         {
-//           "iapkitApiKey": "openiap-kit_<your-key>",
-//           "modules": {
-//             "onside": true,
-//             "horizon": true
-//           },
-//           "google": {
-//             "horizonAppId": "YOUR_HORIZON_APP_ID"
-//           }
-//         }
-//       ]
-//     ]
-//   }
-// }
-
 const config: ExpoConfig = {
   name: "Cozmic Wallpapers",
   slug: "cozmic-wallpapers",

@@ -26,7 +26,6 @@ export type WallpaperPreview = {
 export type CreditPlan = {
   id: string;
   name: string;
-  price: string;
   credits: number;
   description: string;
   badge?: string;

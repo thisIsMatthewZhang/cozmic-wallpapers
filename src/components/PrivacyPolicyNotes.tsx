@@ -13,8 +13,8 @@ const policySections: PolicySection[] = [
     notes: [
       "Account data: email address, password handled by Firebase Authentication, display name, Firebase user ID, email verification status, local session state, account timestamps, and any profile fields enabled later.",
       "Wallpaper generation data: user prompts, cleaned prompts returned by the preflight classifier, requested image count, resolution, device aspect ratio bucket, generation job ID, job status, error messages, token usage metadata, generated image paths, and generated wallpaper files.",
-      "Credit and payment data: credit balance, generation credit cost, credit purchase history, Stripe customer/payment identifiers, transaction status, receipt or invoice metadata, refund or dispute records, and other records needed to fulfill purchases. Full payment card details should be collected and processed by Stripe, not stored by the app.",
-      "Device and permission data: media library/photo permission status when the user saves wallpapers, temporary local cache files used during download, and operational/security data that Firebase, Google Cloud, Stripe, app stores, or device platforms may process, such as IP address, device identifiers, logs, crash data, or fraud signals.",
+      "Credit and payment data: credit balance, generation credit cost, credit purchase history, App Store transaction identifiers, transaction status, receipt metadata, refund records, and other records needed to fulfill purchases. Payment credentials are processed by Apple and are not stored by the app.",
+      "Device and permission data: media library/photo permission status when the user saves wallpapers, temporary local cache files used during download, and operational/security data that Firebase, Google Cloud, Apple, app stores, or device platforms may process, such as IP address, device identifiers, logs, crash data, or fraud signals.",
       "Optional/user-directed data: customer support messages, privacy request details, and explicit permission to showcase selected wallpapers if that feature is added.",
     ],
   },
@@ -23,7 +23,7 @@ const policySections: PolicySection[] = [
     notes: [
       "Provide account creation, sign-in, authentication, session persistence, and account support.",
       "Classify prompts for safety, generate wallpapers, store generated results, display completed jobs, and allow users to save wallpapers to their photo library.",
-      "Manage credit balances, calculate generation costs, process credit purchases through Stripe, confirm payment status, handle refunds, prevent fraud, and respond to purchase support requests.",
+      "Manage credit balances, calculate generation costs, process credit purchases through Apple In-App Purchase, confirm payment status, handle refunds, prevent fraud, and respond to purchase support requests.",
       "Operate, secure, debug, and improve the app, including abuse prevention, service monitoring, troubleshooting, and compliance with app store, payment, tax, accounting, and legal obligations.",
     ],
   },
@@ -32,7 +32,7 @@ const policySections: PolicySection[] = [
     notes: [
       "Use account data to identify the user, personalize the signed-in experience, secure account access, and associate generation jobs, storage paths, and credit balances with the correct account.",
       "Send prompts and generation settings to Google GenAI/Gemini services to classify prompts and generate wallpaper images. Generated images are stored in Firebase Storage and referenced from Firestore generation jobs.",
-      "Use credit and Stripe-related records to deliver purchased credits, keep account balances accurate, reconcile transactions, and support refunds, chargebacks, disputes, and customer service.",
+      "Use credit and App Store transaction records to deliver purchased credits, keep account balances accurate, reconcile transactions, and support refunds, disputes, and customer service.",
       "Decide before launch whether prompts, generated images, analytics, or support data will be used for model training, product research, internal review, or public showcases. If not, say so clearly; if yes, describe the purpose and consent/opt-out path.",
     ],
   },
@@ -40,7 +40,7 @@ const policySections: PolicySection[] = [
     title: "Data Storage and Security",
     notes: [
       "Account, generation job, credit balance, and image path records are stored in Firebase/Google Cloud services. Generated wallpapers are stored in Firebase Storage under user-specific generation paths.",
-      "Payment card details should be entered through Stripe-hosted or Stripe-controlled payment flows and processed by Stripe. The app should store only the Stripe/payment references and purchase records needed for fulfillment, support, accounting, fraud prevention, and legal compliance.",
+      "Purchases are processed through Apple In-App Purchase. The app stores only the App Store transaction references and purchase records needed for fulfillment, support, accounting, fraud prevention, and legal compliance.",
       "Saved wallpapers are downloaded to a temporary device cache before being saved to the user's photo library; the temporary directory is deleted after the save flow completes.",
       "Define retention periods for account records, generation jobs, generated images, payment records, support messages, logs, and deletion requests before release.",
       "Before launch, replace temporary Firestore and Storage development rules with production rules. Do not promise production-grade access controls until authenticated, user-scoped rules are deployed and verified.",
@@ -49,7 +49,7 @@ const policySections: PolicySection[] = [
   {
     title: "Data Sharing and Disclosure",
     notes: [
-      "Service providers may include Firebase/Google Cloud for authentication, database, cloud functions, storage, logs, and infrastructure; Google GenAI/Gemini for prompt classification and image generation; Stripe for payment processing, fraud prevention, receipts, invoices, refunds, and disputes; and Apple/Google app stores where platform purchases, distribution, diagnostics, or review processes apply.",
+      "Service providers may include Firebase/Google Cloud for authentication, database, cloud functions, storage, logs, and infrastructure; Google GenAI/Gemini for prompt classification and image generation; and Apple or other app stores for payment processing, purchase verification, refunds, distribution, diagnostics, and review processes.",
       "Share data when needed to provide the app, process payments, generate wallpapers, secure the service, prevent fraud or abuse, comply with law, respond to legal requests, enforce terms, complete a business transfer, or act at the user's direction.",
       "If showcasing wallpapers is added, share or publish a user's wallpaper only with explicit permission and include a way to withdraw that permission for future use where practical.",
       "State whether the app uses third-party analytics, advertising, cross-app tracking, data brokers, or marketing SDKs. Current code does not show explicit analytics or advertising integrations, but store disclosures must include SDK behavior once dependencies are installed.",

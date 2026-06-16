@@ -1,70 +1,144 @@
-import { useEffect } from "react";
-import { View } from 'react-native';
-import { useIAP, ErrorCode, finishTransaction } from 'expo-iap';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { colors } from "../constants/theme";
-import AppButton from "./AppButton";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ErrorCode, finishTransaction, useIAP } from "expo-iap";
+import type { Purchase } from "expo-iap";
+import { httpsCallable } from "firebase/functions";
 
-const functions = getFunctions();
-const prepareAppleIAP = httpsCallable<void, { appAccountToken: string }>(functions, "prepareAppleIAP");
+import { creditPlans } from "../constants/creditPlans";
+import { functions } from "../utils/firebase";
+
+const productIds = creditPlans.map((plan) => plan.id);
+const prepareAppleIAP = httpsCallable<void, { appAccountToken: string }>(
+  functions,
+  "prepareAppleIAP",
+);
 const verifyAppleIAP = httpsCallable<
-    { productId: string; transactionId: string; purchaseToken: string },
-    { verified: boolean }
+  { productId: string; transactionId: string; purchaseToken: string },
+  { alreadyFulfilled: boolean; verified: boolean }
 >(functions, "verifyAppleIAP");
 
-export default function Store() {
-    const { products, fetchProducts, requestPurchase } = useIAP({
-        onPurchaseSuccess: async (purchase) => {
-            if (!purchase.purchaseToken || !purchase.transactionId) {
-                throw new Error("Apple did not return signed transaction data.");
-            }
-            const response = await verifyAppleIAP({
-                productId: purchase.productId,
-                transactionId: purchase.transactionId,
-                purchaseToken: purchase.purchaseToken,
-            });
-            if (!response.data.verified) {
-                throw new Error("Failed to verify purchase.");
-            }
-            await finishTransaction({ purchase, isConsumable: true });
-        },
-        onPurchaseError: async (error) => {
-            switch (error.code) {
-                case ErrorCode.UserCancelled:
-                    throw new Error("Purchase was cancelled by the user.");
-                case ErrorCode.NetworkError:
-                    throw new Error("There was a network error and your purchase was not successful.");
-                case ErrorCode.PurchaseVerificationFailed:
-                    throw new Error("Failed to verify purchase.");
-                case ErrorCode.Pending:
-                    throw new Error("An existing purchase is still pending.");
-            }
-        },
-    });
-    useEffect(() => {
-        fetchProducts({ skus: ["planet", "star", "galaxy", "universe"], type: 'in-app'});
-    }, []);
+export type StoreRenderProps = {
+  connected: boolean;
+  errorMessage: string | null;
+  localizedPrices: Record<string, string>;
+  productAvailable: (productId: string) => boolean;
+  productsLoaded: boolean;
+  purchasingProductId: string | null;
+  purchaseProduct: (productId: string) => Promise<void>;
+  successMessage: string | null;
+};
 
-    return (
-        <View>
-        {products.map((product) => (
-            <AppButton
-                key={product.id}
-                title={`${product.title} - ${product.displayPrice}`}
-                onPress={async () => {
-                const { data } = await prepareAppleIAP();
-                await requestPurchase({
-                    request: {
-                        apple: { sku: product.id, appAccountToken: data.appAccountToken },
-                        google: { skus: [product.id] },
-                    },
-                    type: 'in-app',
-                });
-                }}
-                bgColor={colors.cyan}
-                textColor={colors.ink}
-            />
-        ))}
-        </View>
-    );
+type StoreProps = {
+  children: (props: StoreRenderProps) => ReactNode;
+};
+
+export default function Store({ children }: Readonly<StoreProps>) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [purchasingProductId, setPurchasingProductId] = useState<string | null>(null);
+  const processingTransactions = useRef(new Set<string>());
+
+  const processPurchase = useCallback(async (purchase: Purchase) => {
+    if (!purchase.purchaseToken || !purchase.transactionId) {
+      setErrorMessage("Apple did not return signed transaction data.");
+      setPurchasingProductId(null);
+      return;
+    }
+    if (processingTransactions.current.has(purchase.transactionId)) return;
+
+    processingTransactions.current.add(purchase.transactionId);
+    try {
+      const response = await verifyAppleIAP({
+        productId: purchase.productId,
+        transactionId: purchase.transactionId,
+        purchaseToken: purchase.purchaseToken,
+      });
+      if (!response.data.verified) {
+        throw new Error("Failed to verify purchase.");
+      }
+
+      await finishTransaction({ purchase, isConsumable: true });
+      setSuccessMessage(
+        response.data.alreadyFulfilled
+          ? "Purchase restored successfully."
+          : "Credits added to your balance.",
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to verify purchase.");
+    } finally {
+      processingTransactions.current.delete(purchase.transactionId);
+      setPurchasingProductId(null);
+    }
+  }, []);
+
+  const { availablePurchases, connected, products, fetchProducts, getAvailablePurchases, requestPurchase } = useIAP({
+    onPurchaseSuccess: (purchase) => void processPurchase(purchase),
+    onPurchaseError: (error) => {
+      setPurchasingProductId(null);
+      if (error.code !== ErrorCode.UserCancelled) {
+        setErrorMessage(error.message || "Unable to complete purchase.");
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (!connected) return;
+
+    void Promise.all([
+      fetchProducts({ skus: productIds, type: "in-app" }),
+      getAvailablePurchases({ onlyIncludeActiveItemsIOS: false }),
+    ])
+      .catch(() => setErrorMessage("Unable to load App Store products."))
+      .finally(() => setProductsLoaded(true));
+  }, [connected, fetchProducts, getAvailablePurchases]);
+
+  useEffect(() => {
+    availablePurchases.forEach((purchase) => void processPurchase(purchase));
+  }, [availablePurchases, processPurchase]);
+
+  const localizedPrices = useMemo(
+    () => Object.fromEntries(products.map((product) => [product.id, product.displayPrice])),
+    [products],
+  );
+  const availableProductIds = useMemo(
+    () => new Set(products.map((product) => product.id)),
+    [products],
+  );
+
+  const purchaseProduct = useCallback(
+    async (productId: string) => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setPurchasingProductId(productId);
+
+      try {
+        if (!availableProductIds.has(productId)) {
+          throw new Error("This credit pack is unavailable from the App Store.");
+        }
+        const { data } = await prepareAppleIAP();
+        await requestPurchase({
+          request: {
+            apple: { sku: productId, appAccountToken: data.appAccountToken },
+          },
+          type: "in-app",
+        });
+      } catch (error) {
+        setPurchasingProductId(null);
+        setErrorMessage(error instanceof Error ? error.message : "Unable to start purchase.");
+      }
+    },
+    [availableProductIds, requestPurchase],
+  );
+
+  return children({
+    connected,
+    errorMessage,
+    localizedPrices,
+    productAvailable: (productId) => availableProductIds.has(productId),
+    productsLoaded,
+    purchasingProductId,
+    purchaseProduct,
+    successMessage,
+  });
 }

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase-admin/app";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from 'firebase-functions/firestore';
 import { defineInt } from "firebase-functions/params";
 import { GENAI_CLIENT, NANO_BANANA, PREFLIGHT_MODEL, Model } from './gemini-client.js';
@@ -10,7 +10,7 @@ import { COZMIC_WALLPAPER_CONTEXT } from "./system-prompt.js";
 import { GoogleGenAI, GenerateContentConfig, HarmCategory, HarmBlockThreshold, Type, SafetySetting } from "@google/genai";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { Environment, SignedDataVerifier, Type as AppleProductType } from "@apple/app-store-server-library";
+import { Environment, NotificationTypeV2, SignedDataVerifier, Type as AppleProductType } from "@apple/app-store-server-library";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -337,7 +337,13 @@ export const verifyAppleIAP = onCall(
         throw new HttpsError("not-found", "User profile was not found.");
       }
       if (paymentSnapshot.exists) {
-        if (paymentSnapshot.data()?.uid !== uid) {
+        const payment = paymentSnapshot.data();
+        if (
+          payment?.uid !== uid ||
+          payment.productId !== productId ||
+          payment.credits !== credits ||
+          payment.provider !== "apple"
+        ) {
           throw new HttpsError("permission-denied", "This Apple transaction was already claimed.");
         }
         return true;
@@ -362,6 +368,100 @@ export const verifyAppleIAP = onCall(
 
     return { verified: true, alreadyFulfilled, credits };
   }
+);
+
+export const appleIAPNotifications = onRequest(
+  { region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.set("Allow", "POST").status(405).send("Method not allowed");
+      return;
+    }
+
+    const signedPayload = req.body?.signedPayload;
+    if (typeof signedPayload !== "string" || !signedPayload) {
+      res.status(400).send("Missing signedPayload");
+      return;
+    }
+
+    try {
+      const environment = getAppleSignedPayloadEnvironment(signedPayload);
+      const verifier = new SignedDataVerifier(
+        APPLE_ROOT_CERTIFICATES,
+        true,
+        environment,
+        APPLE_BUNDLE_ID,
+        environment === Environment.PRODUCTION ? APPLE_APP_ID.value() : undefined,
+      );
+      const notification = await verifier.verifyAndDecodeNotification(signedPayload);
+      const notificationId = notification.notificationUUID;
+
+      if (!notificationId) {
+        res.status(400).send("Missing notification UUID");
+        return;
+      }
+
+      let transactionId: string | null = null;
+      let uid: string | null = null;
+      let productId: string | null = null;
+      let credits: number | null = null;
+      if (notification.data?.signedTransactionInfo) {
+        const decodedTransaction = await verifier.verifyAndDecodeTransaction(notification.data.signedTransactionInfo);
+        transactionId = decodedTransaction.transactionId ?? null;
+        productId = decodedTransaction.productId ?? null;
+
+        if (transactionId) {
+          const paymentSnapshot = await db.doc(`payments/${transactionId}`).get();
+          uid = paymentSnapshot.data()?.uid ?? null;
+          credits = paymentSnapshot.data()?.credits ?? null;
+        }
+      }
+
+      await db.doc(`appleIAPNotifications/${notificationId}`).create(
+        {
+          notificationId,
+          notificationType: notification.notificationType ?? null,
+          subtype: notification.subtype ?? null,
+          environment: notification.data?.environment ?? null,
+          productId,
+          transactionId,
+          uid,
+          signedDate: notification.signedDate ?? null,
+          receivedAt: FieldValue.serverTimestamp(),
+        },
+      ).catch((error: unknown) => {
+        if (isAlreadyExistsError(error)) return;
+        throw error;
+      });
+
+      if (
+        notification.notificationType === NotificationTypeV2.REFUND &&
+        transactionId &&
+        uid &&
+        typeof credits === "number"
+      ) {
+        await db.runTransaction(async (transaction) => {
+          const paymentRef = db.doc(`payments/${transactionId}`);
+          const paymentSnapshot = await transaction.get(paymentRef);
+          if (!paymentSnapshot.exists || paymentSnapshot.data()?.refunded === true) return;
+
+          transaction.update(db.doc(`users/${uid}`), {
+            creditBalance: FieldValue.increment(-credits),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+          transaction.update(paymentRef, {
+            refunded: true,
+            refundedAt: FieldValue.serverTimestamp(),
+          });
+        });
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Apple IAP notification verification failed", error);
+      res.status(400).send("Invalid signedPayload");
+    }
+  },
 );
 
 export const prepareAppleIAP = onCall(
@@ -400,13 +500,30 @@ function isProductId(value: unknown): value is typeof PRODUCT_IDS[number] {
 }
 
 function getAppleTransactionEnvironment(signedTransaction: string): Environment {
+  return getAppleSignedPayloadEnvironment(signedTransaction);
+}
+
+function getAppleSignedPayloadEnvironment(signedPayload: string): Environment {
   try {
-    const payload = signedTransaction.split(".")[1];
-    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { environment?: unknown };
-    if (decoded.environment === Environment.PRODUCTION) return Environment.PRODUCTION;
-    if (decoded.environment === Environment.SANDBOX) return Environment.SANDBOX;
+    const payload = signedPayload.split(".")[1];
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      data?: { environment?: unknown };
+      environment?: unknown;
+    };
+    const environment = decoded.environment ?? decoded.data?.environment;
+    if (environment === Environment.PRODUCTION) return Environment.PRODUCTION;
+    if (environment === Environment.SANDBOX) return Environment.SANDBOX;
   } catch {
     // The signed payload is fully validated immediately after this routing check.
   }
   throw new HttpsError("invalid-argument", "Unsupported Apple transaction environment.");
+}
+
+function isAlreadyExistsError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === 6 || error.code === "already-exists")
+  );
 }
