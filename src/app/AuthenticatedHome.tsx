@@ -36,6 +36,7 @@ export function AuthenticatedHome({
   onGenerationComplete,
 }: Readonly<AuthenticatedHomeProps>) {
   const [showPacksModal, setShowPacksModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
@@ -71,6 +72,24 @@ export function AuthenticatedHome({
                 showPacksModal && styles.topButtonLabelActive,
               ]}
               title="Credit Packs"
+            />
+            <AppButton
+              bgColor={
+                showPrivacyModal
+                  ? "rgba(114, 228, 255, 0.12)"
+                  : colors.panelSoft
+              }
+              customStyle={[
+                styles.topButton,
+                showPrivacyModal && styles.topButtonActive,
+              ]}
+              onPress={() => setShowPrivacyModal(true)}
+              textColor={showPrivacyModal ? colors.cyan : colors.cloud}
+              textStyle={[
+                styles.topButtonLabel,
+                showPrivacyModal && styles.topButtonLabelActive,
+              ]}
+              title="Privacy Policy"
             />
             <AppButton
               bgColor={colors.panelSoft}
@@ -236,6 +255,55 @@ export function AuthenticatedHome({
           </View>
         </View>
       </ReusableModal>
+      <ReusableModal
+        showModal={showPrivacyModal}
+        setShowModal={setShowPrivacyModal}
+        modalProps={{
+          transparent: true,
+          presentationStyle: "overFullScreen",
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close privacy policy"
+            onPress={() => setShowPrivacyModal(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.modalSheet, styles.privacyModalSheet]}>
+            <View style={styles.privacyContent}>
+              <View style={styles.privacyHeader}>
+                <Text style={styles.privacyEyebrow}>Privacy Policy</Text>
+                <Text style={styles.privacyTitle}>Your privacy matters.</Text>
+              </View>
+              <Text style={styles.privacyBody}>
+                Cozmic Wallpapers is committed to maintaining your privacy and
+                processing your information in accordance with the EU GDPR. The
+                Privacy Policy applies to all websites and mobile applications
+                owned or controlled by Cozmic Wallpapers at any given time,
+                including the applications listed on the Cozmic Wallpapers
+                developer pages in the Apple App Store and Google Play Store.
+              </Text>
+              <Text style={styles.privacyBody}>
+                Please read the full Privacy Policy carefully to understand how
+                data is collected, processed, managed, and used, and to learn
+                about your rights as a data subject.
+              </Text>
+              <AppButton
+                bgColor="rgba(114, 228, 255, 0.12)"
+                customStyle={styles.privacyLinkButton}
+                onPress={() => undefined}
+                textColor={colors.cyan}
+                textStyle={styles.privacyLinkLabel}
+                title="View Full Privacy Policy"
+              />
+              <Text style={styles.privacyPlaceholder}>
+                Firebase Hosting URL will be added here.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </ReusableModal>
     </KeyboardAvoidingView>
   );
 }
@@ -250,7 +318,10 @@ const styles = StyleSheet.create({
   },
   topActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
+    justifyContent: "flex-end",
+    flex: 1,
     gap: 8,
   },
   welcomeLabel: {
@@ -404,5 +475,51 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderColor: colors.lineStrong,
     backgroundColor: colors.ink,
+  },
+  privacyModalSheet: {
+    minHeight: 320,
+  },
+  privacyContent: {
+    gap: 16,
+    padding: 22,
+  },
+  privacyHeader: {
+    gap: 8,
+  },
+  privacyEyebrow: {
+    color: colors.cyan,
+    fontSize: typography.caption,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  privacyTitle: {
+    color: colors.white,
+    fontSize: typography.headline,
+    fontWeight: "800",
+  },
+  privacyBody: {
+    color: colors.cloud,
+    fontSize: typography.body,
+    lineHeight: 23,
+  },
+  privacyLinkButton: {
+    alignSelf: "flex-start",
+    borderColor: colors.cyan,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    marginTop: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+  privacyLinkLabel: {
+    color: colors.cyan,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  privacyPlaceholder: {
+    color: colors.mist,
+    fontSize: typography.caption,
+    lineHeight: 17,
   },
 });
