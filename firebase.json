@@ -34,6 +34,10 @@
       "host": "0.0.0.0",
       "enabled": true
     },
+    "hosting": {
+      "port": 5000,
+      "host": "0.0.0.0"
+    },
     "singleProjectMode": true
   },
   "firestore": {
@@ -44,6 +48,16 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
   },
   "auth": {
     "providers": {
