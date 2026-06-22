@@ -7,7 +7,7 @@ import { SectionHeader } from "../components/SectionHeader";
 import Store, { type StoreRenderProps } from "../components/Store";
 import { creditPlans } from "../constants/creditPlans";
 import { colors, radii, typography } from "../constants/theme";
-import { useAuth } from "../contexts/AuthContext";
+import { useAppUser } from "../contexts/AppUserContext";
 import type { CreditPlan } from "../types/wallpaper";
 import { db } from "../utils/firebase";
 
@@ -85,16 +85,19 @@ function PlanCard({ plan, store }: Readonly<PlanCardProps>) {
 }
 
 export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenProps>) {
-  const { user } = useAuth();
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const { creditBalance: initializedCreditBalance, uid } = useAppUser();
+  const [creditBalance, setCreditBalance] = useState<number | null>(
+    initializedCreditBalance,
+  );
 
   useEffect(() => {
-    if (!user) return;
-    return onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+    if (!uid) return;
+
+    return onSnapshot(doc(db, "users", uid), (snapshot) => {
       const balance = snapshot.data()?.creditBalance;
       setCreditBalance(typeof balance === "number" ? balance : 0);
     });
-  }, [user]);
+  }, [uid]);
 
   return (
     <Store>
@@ -144,7 +147,7 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
         <SectionHeader
           eyebrow="Credit Packages"
           title="Pick a pack for the way you create"
-          description="New users also receive a Pod Bonus of 12 free credits during onboarding."
+          description="Credits are connected to your generated app user ID on this device."
         />
         <View style={styles.planList}>
           {creditPlans.map((plan) => (
@@ -163,7 +166,7 @@ export function DownloadPlansScreen({ onClose }: Readonly<DownloadPlansScreenPro
       <View style={styles.notePanel}>
         <Text style={styles.noteTitle}>How the wallet could work</Text>
         <Text style={styles.noteText}>
-          Credits stay in the account balance. Each generation charges by selected resolution, and finished wallpaper downloads do not cost additional credits.
+          Credits stay with your app user ID. Each generation charges by selected resolution, and finished wallpaper downloads do not cost additional credits.
         </Text>
       </View>
     </ScrollView>

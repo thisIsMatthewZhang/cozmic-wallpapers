@@ -17,7 +17,6 @@ import { ScreenShell } from "@/src/components/ScreenShell";
 import { SectionHeader } from "@/src/components/SectionHeader";
 import { WallpaperCard } from "@/src/components/WallpaperCard";
 import { colors, radii, typography } from "../constants/theme";
-import { useAuth } from "../contexts/AuthContext";
 import { usePromptSuggestion } from "../hooks/usePromptSuggestion";
 import {
   featuredWallpapers,
@@ -41,9 +40,6 @@ export function AuthenticatedHome({
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
   const { suggestion, cycleSuggestion } = usePromptSuggestion();
-  const { user, signOutUser } = useAuth();
-
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "Star Glider";
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} style={{ flex: 1 }}>
@@ -51,8 +47,8 @@ export function AuthenticatedHome({
       <ScreenShell>
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.welcomeLabel}>Welcome back</Text>
-            <Text style={styles.welcomeValue}>{displayName}</Text>
+            <Text style={styles.welcomeLabel}>Launch Pad</Text>
+            <Text style={styles.welcomeValue}>Cozmic Wallpapers</Text>
           </View>
           <View style={styles.topActions}>
             <AppButton
@@ -90,14 +86,6 @@ export function AuthenticatedHome({
                 showPrivacyModal && styles.topButtonLabelActive,
               ]}
               title="Privacy Policy"
-            />
-            <AppButton
-              bgColor={colors.panelSoft}
-              customStyle={styles.topButton}
-              onPress={signOutUser}
-              textColor={colors.cloud}
-              textStyle={styles.topButtonLabel}
-              title="Sign out"
             />
           </View>
         </View>

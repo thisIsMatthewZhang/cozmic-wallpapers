@@ -1,6 +1,10 @@
+import { createAsyncStorage } from "@react-native-async-storage/async-storage";
 import { initializeApp, getApp, getApps } from "firebase/app";
-import type { Auth } from "firebase/auth";
-import { connectAuthEmulator, initializeAuth } from "firebase/auth";
+import type { Auth, Persistence } from "firebase/auth";
+import {
+  connectAuthEmulator,
+  initializeAuth,
+} from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import type { Functions } from "firebase/functions";
@@ -10,8 +14,16 @@ import { connectStorageEmulator, getStorage } from "firebase/storage";
 
 import firebaseConfig from "../constants/firebaseConfig";
 
+const { getReactNativePersistence } = require("@firebase/auth") as {
+  getReactNativePersistence: (storage: unknown) => Persistence;
+};
+
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const authInstance: Auth = initializeAuth(app);
+const authInstance: Auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(
+    createAsyncStorage("cozmic-wallpapers"),
+  ),
+});
 const dbInstance: Firestore = getFirestore(app);
 const functionsInstance: Functions = getFunctions(app);
 const storageInstance: FirebaseStorage = getStorage(app);

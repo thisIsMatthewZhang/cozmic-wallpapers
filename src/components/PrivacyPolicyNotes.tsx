@@ -11,7 +11,7 @@ const policySections: PolicySection[] = [
   {
     title: "Types of Data Collected",
     notes: [
-      "Account data: email address, password handled by Firebase Authentication, display name, Firebase user ID, email verification status, local session state, account timestamps, and any profile fields enabled later.",
+      "Identifier data: generated app user ID, local session state, and any device or session identifiers needed to provide app functionality.",
       "Wallpaper generation data: user prompts, cleaned prompts returned by the preflight classifier, requested image count, resolution, device aspect ratio bucket, generation job ID, job status, error messages, token usage metadata, generated image paths, and generated wallpaper files.",
       "Credit and payment data: credit balance, generation credit cost, credit purchase history, App Store transaction identifiers, transaction status, receipt metadata, refund records, and other records needed to fulfill purchases. Payment credentials are processed by Apple and are not stored by the app.",
       "Device and permission data: media library/photo permission status when the user saves wallpapers, temporary local cache files used during download, and operational/security data that Firebase, Google Cloud, Apple, app stores, or device platforms may process, such as IP address, device identifiers, logs, crash data, or fraud signals.",
@@ -21,7 +21,7 @@ const policySections: PolicySection[] = [
   {
     title: "Purpose of Data Collection",
     notes: [
-      "Provide account creation, sign-in, authentication, session persistence, and account support.",
+      "Provide generated app user ID creation, session persistence, and user-scoped app functionality.",
       "Classify prompts for safety, generate wallpapers, store generated results, display completed jobs, and allow users to save wallpapers to their photo library.",
       "Manage credit balances, calculate generation costs, process credit purchases through Apple In-App Purchase, confirm payment status, handle refunds, prevent fraud, and respond to purchase support requests.",
       "Operate, secure, debug, and improve the app, including abuse prevention, service monitoring, troubleshooting, and compliance with app store, payment, tax, accounting, and legal obligations.",

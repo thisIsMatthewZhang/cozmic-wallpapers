@@ -19,6 +19,7 @@ const db = getFirestore();
 const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
+const ONBOARDING_CREDIT_BALANCE = 12;
 const APPLE_APP_ID = defineInt("APPLE_APP_ID");
 const APPLE_BUNDLE_ID = "app.wallpapers.cozmic";
 const APPLE_ROOT_CERTIFICATES = [
@@ -122,6 +123,55 @@ async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K"
   return response;
 }
 
+export const initializeAppUser = onCall(
+  { region: "us-central1", enforceAppCheck: false },
+  async (req) => {
+    const uid = req.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
+    }
+
+    const userRef = db.doc(`users/${uid}`);
+    const result = await db.runTransaction(async (transaction) => {
+      const userSnapshot = await transaction.get(userRef);
+
+      if (userSnapshot.exists) {
+        const creditBalance = userSnapshot.data()?.creditBalance;
+        transaction.update(userRef, {
+          lastLoginAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return {
+          created: false,
+          creditBalance: typeof creditBalance === "number" ? creditBalance : 0,
+        };
+      }
+
+      transaction.create(userRef, {
+        uid,
+        creditBalance: ONBOARDING_CREDIT_BALANCE,
+        totalGenerations: 0,
+        generatedJobIds: [],
+        generatedImagePaths: [],
+        storageRootPath: `users/${uid}`,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
+      });
+
+      return {
+        created: true,
+        creditBalance: ONBOARDING_CREDIT_BALANCE,
+      };
+    });
+
+    return {
+      uid,
+      ...result,
+    };
+  },
+);
+
 /**
  * Callable that queues a new generation job (does not perform the process of generating images).
  * Client validation is processed along with prompt checking.
@@ -129,8 +179,8 @@ async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K"
 export const startGenerationJob = onCall(
   { region: "us-central1", enforceAppCheck: false },
   async (req) => {
-    if (!req.auth) {
-      throw new HttpsError("unauthenticated", "Sign in required.");
+    if (!req.auth?.uid) {
+      throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
     }
 
     const { prompt, numberOfImages, requestedResolution, aspectRatio }: { 
@@ -283,7 +333,7 @@ export const verifyAppleIAP = onCall(
   { region: "us-central1", enforceAppCheck: false },
   async (req) => {
     if (!req.auth) {
-      throw new HttpsError("unauthenticated", "Sign in required.");
+      throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
     }
     const uid = req.auth.uid;
     const { productId, transactionId, purchaseToken } = req.data ?? {};
@@ -468,7 +518,7 @@ export const prepareAppleIAP = onCall(
   { region: "us-central1", enforceAppCheck: false },
   async (req) => {
     if (!req.auth) {
-      throw new HttpsError("unauthenticated", "Sign in required.");
+      throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
     }
 
     const userRef = db.doc(`users/${req.auth.uid}`);
