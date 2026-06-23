@@ -34,7 +34,6 @@ import { db, storage } from "../utils/firebase";
 import {
   featuredWallpapers,
   presets,
-  ratios,
   wallpaperStyles,
 } from "../utils/mockData";
 import { DownloadPlansScreen } from "./DownloadPlansScreen";
@@ -151,7 +150,6 @@ export function AuthenticatedHome({
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
-  const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
   const [generationHistory, setGenerationHistory] = useState<WallpaperPreview[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -347,42 +345,6 @@ export function AuthenticatedHome({
                 selected={selectedStyle === styleOption.id}
               />
             ))}
-          </View>
-        </View>
-
-        <View style={styles.sectionBlock}>
-          <SectionHeader
-            eyebrow="Canvas"
-            title="Choose output framing"
-            description="Different crops for lock screens, story-friendly exports, and square previews."
-          />
-          <View style={styles.aspectRow}>
-            {ratios.map((ratio) => {
-              const active = selectedRatio === ratio.id;
-
-              return (
-                <Pressable
-                  key={ratio.id}
-                  onPress={() => setSelectedRatio(ratio.id)}
-                  style={[
-                    styles.aspectCard,
-                    active && styles.aspectCardActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.aspectLabel,
-                      active && styles.aspectLabelActive,
-                    ]}
-                  >
-                    {ratio.label}
-                  </Text>
-                  <Text style={styles.aspectDescription}>
-                    {ratio.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
           </View>
         </View>
 
@@ -622,36 +584,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-  },
-  aspectRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  aspectCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
-    backgroundColor: colors.panelBright,
-    gap: 6,
-  },
-  aspectCardActive: {
-    borderColor: colors.cyan,
-    backgroundColor: "rgba(114, 228, 255, 0.1)",
-  },
-  aspectLabel: {
-    color: colors.white,
-    fontSize: typography.section,
-    fontWeight: "700",
-  },
-  aspectLabelActive: {
-    color: colors.cyan,
-  },
-  aspectDescription: {
-    color: colors.mist,
-    fontSize: 13,
-    lineHeight: 18,
   },
   cardColumn: {
     gap: 14,
