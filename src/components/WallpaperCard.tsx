@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { ImageBackground, StyleSheet, Text, View } from "react-native";
 
 import { colors, radii, typography } from "../constants/theme";
 import type { WallpaperPreview } from "../types/wallpaper";
@@ -6,20 +6,42 @@ import type { WallpaperPreview } from "../types/wallpaper";
 type WallpaperCardProps = {
   item: WallpaperPreview;
   compact?: boolean;
+  showTextOverlay?: boolean;
 };
 
 export function WallpaperCard({
   item,
   compact = false,
+  showTextOverlay = true,
 }: Readonly<WallpaperCardProps>) {
+  const cardStyles = [
+    styles.card,
+    compact ? styles.compactCard : styles.largeCard,
+    { backgroundColor: item.colors[0] },
+  ];
+
+  if (item.imageUri) {
+    return (
+      <ImageBackground
+        imageStyle={styles.image}
+        source={{ uri: item.imageUri }}
+        style={cardStyles}
+      >
+        {showTextOverlay ? (
+          <>
+            <View style={styles.imageScrim} />
+            <View style={styles.copy}>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.subtitle}>{item.subtitle}</Text>
+            </View>
+          </>
+        ) : null}
+      </ImageBackground>
+    );
+  }
+
   return (
-    <View
-      style={[
-        styles.card,
-        compact ? styles.compactCard : styles.largeCard,
-        { backgroundColor: item.colors[0] },
-      ]}
-    >
+    <View style={cardStyles}>
       <View style={styles.starCluster} />
       <View
         style={[
@@ -51,6 +73,13 @@ const styles = StyleSheet.create({
   compactCard: {
     height: 136,
     padding: 16,
+  },
+  image: {
+    borderRadius: radii.md,
+  },
+  imageScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2, 8, 22, 0.42)",
   },
   gradientBlob: {
     position: "absolute",

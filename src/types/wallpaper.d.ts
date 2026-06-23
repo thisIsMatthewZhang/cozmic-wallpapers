@@ -21,6 +21,7 @@ export type WallpaperPreview = {
   subtitle: string;
   colors: [string, string];
   accent: string;
+  imageUri?: string;
 };
 
 export type CreditPlan = {

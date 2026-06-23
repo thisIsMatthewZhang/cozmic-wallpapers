@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -8,6 +8,16 @@ import {
   View,
   Platform,
 } from "react-native";
+import {
+  collection,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import type { Unsubscribe } from "firebase/firestore";
+import { getDownloadURL, ref } from "firebase/storage";
 
 import AppButton from "@/src/components/AppButton";
 import { ChoiceChip } from "@/src/components/ChoiceChip";
@@ -17,12 +27,14 @@ import { ScreenShell } from "@/src/components/ScreenShell";
 import { SectionHeader } from "@/src/components/SectionHeader";
 import { WallpaperCard } from "@/src/components/WallpaperCard";
 import { colors, radii, typography } from "../constants/theme";
+import { useAppUser } from "../contexts/AppUserContext";
 import { usePromptSuggestion } from "../hooks/usePromptSuggestion";
+import type { WallpaperPreview } from "../types/wallpaper";
+import { db, storage } from "../utils/firebase";
 import {
   featuredWallpapers,
   presets,
   ratios,
-  recentGenerations,
   wallpaperStyles,
 } from "../utils/mockData";
 import { DownloadPlansScreen } from "./DownloadPlansScreen";
@@ -30,6 +42,107 @@ import { DownloadPlansScreen } from "./DownloadPlansScreen";
 type AuthenticatedHomeProps = {
   onGenerationComplete: (images: string[]) => void;
 };
+
+type GenerationHistoryDocument = {
+  aspectRatio?: unknown;
+  createdAt?: unknown;
+  imagePaths?: unknown;
+  numberOfImages?: unknown;
+  prompt?: unknown;
+  resolution?: unknown;
+  status?: unknown;
+};
+
+const HISTORY_CARD_LIMIT = 5;
+const HISTORY_JOB_LIMIT = 5;
+const historyPalettes: Array<Pick<WallpaperPreview, "accent" | "colors">> = [
+  { accent: "#72E4FF", colors: ["#071828", "#14304F"] },
+  { accent: "#FFD166", colors: ["#180E19", "#4F2831"] },
+  { accent: "#7EF7C6", colors: ["#091525", "#1B5A6B"] },
+  { accent: "#8597FF", colors: ["#07111B", "#1B2957"] },
+  { accent: "#FF8C7A", colors: ["#1C1124", "#4A1C1C"] },
+];
+
+function timestampToDate(value: unknown) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof value.toDate === "function"
+  ) {
+    return value.toDate() as Date;
+  }
+
+  return null;
+}
+
+function formatHistoryTime(value: unknown) {
+  const date = timestampToDate(value);
+  if (!date) return "Generated recently";
+
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - date.getTime()) / 60000),
+  );
+  if (elapsedMinutes < 1) return "Generated just now";
+  if (elapsedMinutes < 60) {
+    return `Generated ${elapsedMinutes} min ago`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `Generated ${elapsedHours} hr ago`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `Generated ${elapsedDays} day${elapsedDays === 1 ? "" : "s"} ago`;
+}
+
+function formatHistoryTitle(prompt: unknown, fallback: string) {
+  if (typeof prompt !== "string" || !prompt.trim()) return fallback;
+
+  const trimmedPrompt = prompt.trim();
+  return trimmedPrompt.length > 52
+    ? `${trimmedPrompt.slice(0, 49)}...`
+    : trimmedPrompt;
+}
+
+function formatHistorySubtitle(job: GenerationHistoryDocument) {
+  const parts = [formatHistoryTime(job.createdAt)];
+
+  if (typeof job.resolution === "string") {
+    parts.push(job.resolution);
+  }
+  if (typeof job.numberOfImages === "number") {
+    parts.push(`${job.numberOfImages} image${job.numberOfImages === 1 ? "" : "s"}`);
+  }
+
+  return parts.join(" - ");
+}
+
+function getImagePaths(imagePaths: unknown) {
+  if (!Array.isArray(imagePaths)) return [];
+
+  return imagePaths.filter((path): path is string => typeof path === "string");
+}
+
+function mapHistoryDocument(
+  id: string,
+  data: GenerationHistoryDocument,
+  index: number,
+  imageUri?: string,
+  imageIndex?: number,
+): WallpaperPreview {
+  const palette = historyPalettes[index % historyPalettes.length];
+
+  return {
+    id: imageIndex === undefined ? id : `${id}-${imageIndex}`,
+    title: formatHistoryTitle(data.prompt, `Generation ${index + 1}`),
+    subtitle: formatHistorySubtitle(data),
+    imageUri,
+    ...palette,
+  };
+}
 
 export function AuthenticatedHome({
   onGenerationComplete,
@@ -39,7 +152,83 @@ export function AuthenticatedHome({
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [selectedRatio, setSelectedRatio] = useState(ratios[0].id);
+  const [generationHistory, setGenerationHistory] = useState<WallpaperPreview[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const { suggestion, cycleSuggestion } = usePromptSuggestion();
+  const { uid } = useAppUser();
+
+  useEffect(() => {
+    let isActive = true;
+    let unsubscribe: Unsubscribe | undefined;
+
+    if (!uid) {
+      setGenerationHistory([]);
+      setIsHistoryLoading(false);
+      return undefined;
+    }
+
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+
+    const historyQuery = query(
+      collection(db, "generationJobs"),
+      where("uid", "==", uid),
+      where("status", "==", "complete"),
+      orderBy("createdAt", "desc"),
+      limit(HISTORY_JOB_LIMIT),
+    );
+
+    unsubscribe = onSnapshot(
+      historyQuery,
+      (snapshot) => {
+        void Promise.all(
+          snapshot.docs.map(async (docSnapshot, index) => {
+            const data = docSnapshot.data() as GenerationHistoryDocument;
+            const imagePaths = getImagePaths(data.imagePaths);
+
+            if (!imagePaths.length) {
+              return [mapHistoryDocument(docSnapshot.id, data, index)];
+            }
+
+            const items = await Promise.all(
+              imagePaths.map(async (imagePath, imageIndex) => {
+                const imageUri = await getDownloadURL(
+                  ref(storage, imagePath),
+                ).catch(() => undefined);
+
+                return mapHistoryDocument(
+                  docSnapshot.id,
+                  data,
+                  index,
+                  imageUri,
+                  imageIndex,
+                );
+              }),
+            );
+
+            return items;
+          }),
+        ).then((items) => {
+          if (!isActive) return;
+          setGenerationHistory(items.flat().slice(0, HISTORY_CARD_LIMIT));
+          setHistoryError(null);
+          setIsHistoryLoading(false);
+        });
+      },
+      () => {
+        if (!isActive) return;
+        setGenerationHistory([]);
+        setHistoryError("Unable to load recent generations.");
+        setIsHistoryLoading(false);
+      },
+    );
+
+    return () => {
+      isActive = false;
+      unsubscribe?.();
+    };
+  }, [uid]);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10} style={{ flex: 1 }}>
@@ -212,15 +401,41 @@ export function AuthenticatedHome({
 
         <View style={styles.queuePanel}>
           <SectionHeader
-            eyebrow="Queue"
+            eyebrow="History"
             title="Recent generations"
-            description="A preview of how history and job status could feel inside the app."
+            description="Your latest completed wallpapers are saved to this device's generated app user ID."
           />
-          <View style={styles.cardColumn}>
-            {recentGenerations.map((item) => (
-              <WallpaperCard compact key={item.id} item={item} />
-            ))}
-          </View>
+          {isHistoryLoading ? (
+            <Text style={styles.historyMessage}>Loading recent generations...</Text>
+          ) : historyError ? (
+            <Text style={styles.historyError}>{historyError}</Text>
+          ) : generationHistory.length ? (
+            <>
+              <View style={styles.cardColumn}>
+                {generationHistory.map((item) => (
+                  <WallpaperCard
+                    compact
+                    key={item.id}
+                    item={item}
+                    showTextOverlay={!item.imageUri}
+                  />
+                ))}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => undefined}
+                style={styles.historyGridLink}
+              >
+                <Text style={styles.historyGridLinkText}>
+                  View all generated wallpapers
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <Text style={styles.historyMessage}>
+              Completed wallpapers will appear here after your first generation.
+            </Text>
+          )}
         </View>
       </ScreenShell>
       <ReusableModal
@@ -448,6 +663,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.lineStrong,
     backgroundColor: "rgba(8, 20, 39, 0.8)",
+  },
+  historyMessage: {
+    color: colors.mist,
+    fontSize: typography.body,
+    lineHeight: 21,
+  },
+  historyError: {
+    color: colors.coral,
+    fontSize: typography.body,
+    fontWeight: "700",
+    lineHeight: 21,
+  },
+  historyGridLink: {
+    alignSelf: "flex-start",
+    paddingVertical: 2,
+  },
+  historyGridLinkText: {
+    color: colors.cyan,
+    fontSize: typography.body,
+    fontWeight: "800",
   },
   modalBackdrop: {
     flex: 1,
