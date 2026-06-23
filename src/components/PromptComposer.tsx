@@ -25,6 +25,8 @@ type PromptComposerProps = {
   initialPrompt: string;
   onGenerationComplete: (images: string[]) => void;
   onRemix: () => void;
+  selectedPresetLabel: string;
+  selectedStyleLabel: string;
 };
 type GenerationJobId = {
   jobId: string
@@ -66,10 +68,26 @@ const normalizeImageSources = (imagePaths: string[]): ImageSourcePropType[] => {
   return imagePaths.map((imagePath) => ({ uri: imagePath }));
 };
 
+const composeGenerationPrompt = (
+  prompt: string,
+  selectedPresetLabel: string,
+  selectedStyleLabel: string,
+) => {
+  const trimmedPrompt = prompt.trim();
+  const promptDirectives = [
+    `Preset engine: ${selectedPresetLabel}.`,
+    `Look and feel: ${selectedStyleLabel}.`,
+  ];
+
+  return [trimmedPrompt, ...promptDirectives].join("\n\n");
+};
+
 export function PromptComposer({
   initialPrompt,
   onGenerationComplete,
   onRemix,
+  selectedPresetLabel,
+  selectedStyleLabel,
 }: Readonly<PromptComposerProps>) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [generationStatus, setGenerationStatus] =
@@ -129,7 +147,16 @@ export function PromptComposer({
       GenerationJobId
     >(functions, "startGenerationJob");
 
-    startGenerationJob({ prompt, numberOfImages: requestedImageCount, requestedResolution, aspectRatio: CLOSEST_ASPECT_RATIO })
+    startGenerationJob({
+      prompt: composeGenerationPrompt(
+        prompt,
+        selectedPresetLabel,
+        selectedStyleLabel,
+      ),
+      numberOfImages: requestedImageCount,
+      requestedResolution,
+      aspectRatio: CLOSEST_ASPECT_RATIO,
+    })
       .then((result) => {
         if (!isMountedRef.current) return;
         const jobId = result.data.jobId;

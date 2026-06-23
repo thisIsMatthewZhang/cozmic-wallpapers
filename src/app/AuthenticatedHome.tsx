@@ -155,6 +155,12 @@ export function AuthenticatedHome({
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const { suggestion, cycleSuggestion } = usePromptSuggestion();
   const { uid } = useAppUser();
+  const selectedPresetLabel =
+    presets.find((preset) => preset.id === selectedPreset)?.label ??
+    presets[0].label;
+  const selectedStyleLabel =
+    wallpaperStyles.find((styleOption) => styleOption.id === selectedStyle)
+      ?.label ?? wallpaperStyles[0].label;
 
   useEffect(() => {
     let isActive = true;
@@ -309,6 +315,8 @@ export function AuthenticatedHome({
           initialPrompt={suggestion}
           onGenerationComplete={onGenerationComplete}
           onRemix={cycleSuggestion}
+          selectedPresetLabel={selectedPresetLabel}
+          selectedStyleLabel={selectedStyleLabel}
         />
 
         <View style={styles.sectionBlock}>
