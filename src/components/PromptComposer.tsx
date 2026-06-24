@@ -64,10 +64,6 @@ const generationStatusCopy: Record<
   },
 };
 
-const normalizeImageSources = (imagePaths: string[]): ImageSourcePropType[] => {
-  return imagePaths.map((imagePath) => ({ uri: imagePath }));
-};
-
 const composeGenerationPrompt = (
   prompt: string,
   selectedPresetLabel: string,
