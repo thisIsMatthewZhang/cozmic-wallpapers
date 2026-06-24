@@ -4,7 +4,13 @@ import { typography, colors } from '../constants/theme';
 import Svg, { Circle, G, Path, Polygon } from 'react-native-svg';
 import { useEffect } from 'react';
 
-export default function SuccessfulSaveAnimation() {
+type SuccessfulSaveAnimationProps = {
+    message?: string;
+};
+
+export default function SuccessfulSaveAnimation({
+    message = "Wallpaper(s) successfully saved to Photos! You will now be sent back to the home screen...",
+}: Readonly<SuccessfulSaveAnimationProps>) {
     const fadeIn = useSharedValue(0);
     const animatedStyle = useAnimatedStyle(() => {
         return { opacity: fadeIn.get() };
@@ -15,7 +21,7 @@ export default function SuccessfulSaveAnimation() {
     return (
         <Animated.View style={[styles.container, animatedStyle]}>
             <AnimatedStar />
-            <Text style={styles.successText}>Wallpaper(s) successfully saved to Photos! You will now be sent back to the home screen...</Text>
+            <Text style={styles.successText}>{message}</Text>
         </Animated.View>
     );
 }

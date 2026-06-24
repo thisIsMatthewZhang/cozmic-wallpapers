@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import {
   collection,
-  limit,
   onSnapshot,
   orderBy,
   query,
@@ -21,11 +20,13 @@ import { getDownloadURL, ref } from "firebase/storage";
 
 import AppButton from "@/src/components/AppButton";
 import { ChoiceChip } from "@/src/components/ChoiceChip";
+import { GenerationHistoryGridModal } from "@/src/components/GenerationHistoryGridModal";
 import { PromptComposer } from "@/src/components/PromptComposer";
 import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
 import { SectionHeader } from "@/src/components/SectionHeader";
 import { WallpaperCard } from "@/src/components/WallpaperCard";
+import { WallpaperRedownloadModal } from "@/src/components/WallpaperRedownloadModal";
 import { colors, radii, typography } from "../constants/theme";
 import { useAppUser } from "../contexts/AppUserContext";
 import { usePromptSuggestion } from "../hooks/usePromptSuggestion";
@@ -53,7 +54,6 @@ type GenerationHistoryDocument = {
 };
 
 const HISTORY_CARD_LIMIT = 5;
-const HISTORY_JOB_LIMIT = 5;
 const historyPalettes: Array<Pick<WallpaperPreview, "accent" | "colors">> = [
   { accent: "#72E4FF", colors: ["#071828", "#14304F"] },
   { accent: "#FFD166", colors: ["#180E19", "#4F2831"] },
@@ -148,6 +148,9 @@ export function AuthenticatedHome({
 }: Readonly<AuthenticatedHomeProps>) {
   const [showPacksModal, setShowPacksModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedHistoryImage, setSelectedHistoryImage] =
+    useState<WallpaperPreview | null>(null);
   const [selectedPreset, setSelectedPreset] = useState(presets[0].id);
   const [selectedStyle, setSelectedStyle] = useState(wallpaperStyles[0].id);
   const [generationHistory, setGenerationHistory] = useState<WallpaperPreview[]>([]);
@@ -161,6 +164,7 @@ export function AuthenticatedHome({
   const selectedStyleLabel =
     wallpaperStyles.find((styleOption) => styleOption.id === selectedStyle)
       ?.label ?? wallpaperStyles[0].label;
+  const recentGenerationHistory = generationHistory.slice(0, HISTORY_CARD_LIMIT);
 
   useEffect(() => {
     let isActive = true;
@@ -180,7 +184,6 @@ export function AuthenticatedHome({
       where("uid", "==", uid),
       where("status", "==", "complete"),
       orderBy("createdAt", "desc"),
-      limit(HISTORY_JOB_LIMIT),
     );
 
     unsubscribe = onSnapshot(
@@ -215,7 +218,7 @@ export function AuthenticatedHome({
           }),
         ).then((items) => {
           if (!isActive) return;
-          setGenerationHistory(items.flat().slice(0, HISTORY_CARD_LIMIT));
+          setGenerationHistory(items.flat());
           setHistoryError(null);
           setIsHistoryLoading(false);
         });
@@ -379,10 +382,10 @@ export function AuthenticatedHome({
             <Text style={styles.historyMessage}>Loading recent generations...</Text>
           ) : historyError ? (
             <Text style={styles.historyError}>{historyError}</Text>
-          ) : generationHistory.length ? (
+          ) : recentGenerationHistory.length ? (
             <>
               <View style={styles.cardColumn}>
-                {generationHistory.map((item) => (
+                {recentGenerationHistory.map((item) => (
                   <WallpaperCard
                     compact
                     key={item.id}
@@ -393,7 +396,7 @@ export function AuthenticatedHome({
               </View>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => undefined}
+                onPress={() => setShowHistoryModal(true)}
                 style={styles.historyGridLink}
               >
                 <Text style={styles.historyGridLinkText}>
@@ -428,6 +431,24 @@ export function AuthenticatedHome({
           </View>
         </View>
       </ReusableModal>
+      <GenerationHistoryGridModal
+        images={generationHistory}
+        onImagePress={(image) => {
+          setSelectedHistoryImage(image);
+          setShowHistoryModal(false);
+        }}
+        setShowModal={setShowHistoryModal}
+        showModal={showHistoryModal}
+      />
+      <WallpaperRedownloadModal
+        image={selectedHistoryImage}
+        setShowModal={(showModal) => {
+          if (!showModal) {
+            setSelectedHistoryImage(null);
+          }
+        }}
+        showModal={selectedHistoryImage !== null}
+      />
       <ReusableModal
         showModal={showPrivacyModal}
         setShowModal={setShowPrivacyModal}
