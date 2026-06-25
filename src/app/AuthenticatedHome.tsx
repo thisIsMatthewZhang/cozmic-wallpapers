@@ -21,6 +21,7 @@ import { getDownloadURL, ref } from "firebase/storage";
 import AppButton from "@/src/components/AppButton";
 import { ChoiceChip } from "@/src/components/ChoiceChip";
 import { GenerationHistoryGridModal } from "@/src/components/GenerationHistoryGridModal";
+import { ProfileInfoModal } from "@/src/components/ProfileInfoModal";
 import { PromptComposer } from "@/src/components/PromptComposer";
 import ReusableModal from "@/src/components/ReusableModal";
 import { ScreenShell } from "@/src/components/ScreenShell";
@@ -143,11 +144,20 @@ function mapHistoryDocument(
   };
 }
 
+function ProfileIcon() {
+  return (
+    <View style={styles.profileIcon}>
+      <View style={styles.profileIconHead} />
+      <View style={styles.profileIconBody} />
+    </View>
+  );
+}
+
 export function AuthenticatedHome({
   onGenerationComplete,
 }: Readonly<AuthenticatedHomeProps>) {
   const [showPacksModal, setShowPacksModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryImage, setSelectedHistoryImage] =
     useState<WallpaperPreview | null>(null);
@@ -265,24 +275,17 @@ export function AuthenticatedHome({
               ]}
               title="Credit Packs"
             />
-            <AppButton
-              bgColor={
-                showPrivacyModal
-                  ? "rgba(114, 228, 255, 0.12)"
-                  : colors.panelSoft
-              }
-              customStyle={[
-                styles.topButton,
-                showPrivacyModal && styles.topButtonActive,
+            <Pressable
+              accessibilityLabel="Open profile and app information"
+              accessibilityRole="button"
+              onPress={() => setShowProfileModal(true)}
+              style={[
+                styles.profileButton,
+                showProfileModal && styles.profileButtonActive,
               ]}
-              onPress={() => setShowPrivacyModal(true)}
-              textColor={showPrivacyModal ? colors.cyan : colors.cloud}
-              textStyle={[
-                styles.topButtonLabel,
-                showPrivacyModal && styles.topButtonLabelActive,
-              ]}
-              title="Privacy Policy"
-            />
+            >
+              <ProfileIcon />
+            </Pressable>
           </View>
         </View>
 
@@ -449,55 +452,11 @@ export function AuthenticatedHome({
         }}
         showModal={selectedHistoryImage !== null}
       />
-      <ReusableModal
-        showModal={showPrivacyModal}
-        setShowModal={setShowPrivacyModal}
-        modalProps={{
-          transparent: true,
-          presentationStyle: "overFullScreen",
-        }}
-      >
-        <View style={styles.modalBackdrop}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close privacy policy"
-            onPress={() => setShowPrivacyModal(false)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={[styles.modalSheet, styles.privacyModalSheet]}>
-            <View style={styles.privacyContent}>
-              <View style={styles.privacyHeader}>
-                <Text style={styles.privacyEyebrow}>Privacy Policy</Text>
-                <Text style={styles.privacyTitle}>Your privacy matters.</Text>
-              </View>
-              <Text style={styles.privacyBody}>
-                Cozmic Wallpapers is committed to maintaining your privacy and
-                processing your information in accordance with the EU GDPR. The
-                Privacy Policy applies to all websites and mobile applications
-                owned or controlled by Cozmic Wallpapers at any given time,
-                including the applications listed on the Cozmic Wallpapers
-                developer pages in the Apple App Store and Google Play Store.
-              </Text>
-              <Text style={styles.privacyBody}>
-                Please read the full Privacy Policy carefully to understand how
-                data is collected, processed, managed, and used, and to learn
-                about your rights as a data subject.
-              </Text>
-              <AppButton
-                bgColor="rgba(114, 228, 255, 0.12)"
-                customStyle={styles.privacyLinkButton}
-                onPress={() => undefined}
-                textColor={colors.cyan}
-                textStyle={styles.privacyLinkLabel}
-                title="View Full Privacy Policy"
-              />
-              <Text style={styles.privacyPlaceholder}>
-                Firebase Hosting URL will be added here.
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ReusableModal>
+      <ProfileInfoModal
+        setShowModal={setShowProfileModal}
+        showModal={showProfileModal}
+        uid={uid}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -549,6 +508,39 @@ const styles = StyleSheet.create({
   },
   topButtonLabelActive: {
     color: colors.cyan,
+  },
+  profileButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panelSoft,
+  },
+  profileButtonActive: {
+    borderColor: colors.cyan,
+    backgroundColor: "rgba(114, 228, 255, 0.12)",
+  },
+  profileIcon: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+  },
+  profileIconHead: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.cloud,
+  },
+  profileIconBody: {
+    width: 18,
+    height: 9,
+    borderTopLeftRadius: 9,
+    borderTopRightRadius: 9,
+    backgroundColor: colors.cloud,
+    marginTop: 3,
   },
   hero: {
     paddingTop: 10,
@@ -659,51 +651,5 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderColor: colors.lineStrong,
     backgroundColor: colors.ink,
-  },
-  privacyModalSheet: {
-    minHeight: 320,
-  },
-  privacyContent: {
-    gap: 16,
-    padding: 22,
-  },
-  privacyHeader: {
-    gap: 8,
-  },
-  privacyEyebrow: {
-    color: colors.cyan,
-    fontSize: typography.caption,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  privacyTitle: {
-    color: colors.white,
-    fontSize: typography.headline,
-    fontWeight: "800",
-  },
-  privacyBody: {
-    color: colors.cloud,
-    fontSize: typography.body,
-    lineHeight: 23,
-  },
-  privacyLinkButton: {
-    alignSelf: "flex-start",
-    borderColor: colors.cyan,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    marginTop: 2,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-  },
-  privacyLinkLabel: {
-    color: colors.cyan,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  privacyPlaceholder: {
-    color: colors.mist,
-    fontSize: typography.caption,
-    lineHeight: 17,
   },
 });
