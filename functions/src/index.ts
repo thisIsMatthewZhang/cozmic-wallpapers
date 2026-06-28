@@ -313,7 +313,13 @@ export const processGenerationJob = onDocumentCreated(
       })
     );
     const docRef = db.doc(`users/${data.uid}`);
-    await docRef.update({ creditBalance: FieldValue.increment(-data.creditCost) })
+    await docRef.update({
+      creditBalance: FieldValue.increment(-data.creditCost),
+      generatedJobIds: FieldValue.arrayUnion(jobId),
+      generatedImagePaths: FieldValue.arrayUnion(...imagePaths),
+      totalGenerations: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp(),
+    })
     .then(async () => {
       await event.data?.ref.update({
         status: 'complete',

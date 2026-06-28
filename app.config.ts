@@ -6,6 +6,7 @@ const config: ExpoConfig = {
   orientation: "portrait",
   plugins: ["expo-iap"],
   ios: {
+    icon: "./assets/images/app-logo.png",
     supportsTablet: true,
     googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",
     bundleIdentifier: "app.wallpapers.cozmic",
@@ -20,6 +21,7 @@ const config: ExpoConfig = {
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
+    icon: "./assets/images/app-logo.png",
     predictiveBackGestureEnabled: false,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
     package: "app.wallpapers.cozmic",
