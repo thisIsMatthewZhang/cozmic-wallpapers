@@ -13,7 +13,7 @@ import { ChoiceChip } from "./ChoiceChip";
 import { httpsCallable } from "firebase/functions";
 import { onSnapshot, doc } from "firebase/firestore";
 import type { Unsubscribe } from "firebase/firestore";
-import { db, functions } from "@/src/utils/firebase";
+import { db, functions } from "../utils/firebase";
 import { colors, radii, typography } from "../constants/theme";
 import { CREDIT_COST_MAPPING } from "../constants/resolution-credit-mapping";
 import { CLOSEST_ASPECT_RATIO } from "../constants/deviceAspectRatio";

@@ -18,16 +18,16 @@ import {
 import type { Unsubscribe } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
 
-import AppButton from "@/src/components/AppButton";
-import { ChoiceChip } from "@/src/components/ChoiceChip";
-import { GenerationHistoryGridModal } from "@/src/components/GenerationHistoryGridModal";
-import { ProfileInfoModal } from "@/src/components/ProfileInfoModal";
-import { PromptComposer } from "@/src/components/PromptComposer";
-import ReusableModal from "@/src/components/ReusableModal";
-import { ScreenShell } from "@/src/components/ScreenShell";
-import { SectionHeader } from "@/src/components/SectionHeader";
-import { WallpaperCard } from "@/src/components/WallpaperCard";
-import { WallpaperRedownloadModal } from "@/src/components/WallpaperRedownloadModal";
+import AppButton from "../components/AppButton";
+import { ChoiceChip } from "../components/ChoiceChip";
+import { GenerationHistoryGridModal } from "../components/GenerationHistoryGridModal";
+import { ProfileInfoModal } from "../components/ProfileInfoModal";
+import { PromptComposer } from "../components/PromptComposer";
+import ReusableModal from "../components/ReusableModal";
+import { ScreenShell } from "../components/ScreenShell";
+import { SectionHeader } from "../components/SectionHeader";
+import { WallpaperCard } from "../components/WallpaperCard";
+import { WallpaperRedownloadModal } from "../components/WallpaperRedownloadModal";
 import { colors, radii, typography } from "../constants/theme";
 import { useAppUser } from "../contexts/AppUserContext";
 import { usePromptSuggestion } from "../hooks/usePromptSuggestion";

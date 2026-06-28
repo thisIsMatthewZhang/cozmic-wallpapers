@@ -8,12 +8,12 @@ import {
   View,
 } from "react-native";
 
-import AppButton from "@/src/components/AppButton";
-import AppCarousel from "@/src/components/AppCarousel";
+import AppButton from "../components/AppButton";
+import AppCarousel from "../components/AppCarousel";
 import SuccessfulSaveAnimation from "../components/SuccessfulSaveAnimation";
-import { ScreenShell } from "@/src/components/ScreenShell";
-import { colors, radii, typography } from "@/src/constants/theme";
-import { storage } from "@/src/utils/firebase";
+import { ScreenShell } from "../components/ScreenShell";
+import { colors, radii, typography } from "../constants/theme";
+import { storage } from "../utils/firebase";
 import { createNewDirectory, downloadFileToDirectory, saveWallpapersToLibrary, askUserForPermission } from "../utils/mediaDownload";
 import { getDownloadURL, ref } from "firebase/storage";
 
