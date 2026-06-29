@@ -26,6 +26,12 @@ const config: ExpoConfig = {
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
     package: "app.wallpapers.cozmic",
   },
+  runtimeVersion: {
+    policy: "appVersion"
+  },
+  updates: {
+    url: "https://u.expo.dev/efe5efb3-e3f7-4dd1-973b-196d2c1ae4f5"
+  },
   extra: {
     eas: {
       projectId: "efe5efb3-e3f7-4dd1-973b-196d2c1ae4f5",
