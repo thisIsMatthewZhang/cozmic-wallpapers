@@ -29,7 +29,7 @@ function getOnboardingCompleteKey(uid: string) {
 }
 
 export default function CozmicApp() {
-  const { errorMessage, isBootstrapping, uid } = useAppUser();
+  const { bootstrapMessage, errorMessage, isBootstrapping, uid } = useAppUser();
   const [route, setRoute] = useState<AppRoute | null>(null);
 
   useEffect(() => {
@@ -82,10 +82,13 @@ export default function CozmicApp() {
         <StatusBar barStyle="light-content" />
         <ScreenShell>
           <View style={styles.loader}>
-            {isBootstrapping || route === null ? (
-              <ActivityIndicator color={colors.cyan} size="large" />
-            ) : (
+            {errorMessage ? (
               <Text style={styles.errorText}>{errorMessage}</Text>
+            ) : (
+              <>
+                <ActivityIndicator color={colors.cyan} size="large" />
+                <Text style={styles.loaderText}>{bootstrapMessage}</Text>
+              </>
             )}
           </View>
         </ScreenShell>
@@ -141,6 +144,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21,
+    textAlign: "center",
+  },
+  loaderText: {
+    color: colors.mist,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 16,
     textAlign: "center",
   },
 });

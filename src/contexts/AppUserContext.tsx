@@ -12,6 +12,7 @@ type InitializeAppUserResponse = {
 };
 
 type AppUserContextValue = {
+  bootstrapMessage: string;
   creditBalance: number | null;
   errorMessage: string | null;
   isBootstrapping: boolean;
@@ -25,7 +26,20 @@ const initializeAppUser = httpsCallable<void, InitializeAppUserResponse>(
   "initializeAppUser",
 );
 
+const BOOTSTRAP_TIMEOUT_MS = 20000;
+
+function withTimeout<T>(promise: Promise<T>, message: string) {
+  let timeoutId: ReturnType<typeof setTimeout>;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), BOOTSTRAP_TIMEOUT_MS);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export function AppUserProvider({ children }: PropsWithChildren) {
+  const [bootstrapMessage, setBootstrapMessage] = useState("Checking account...");
   const [uid, setUid] = useState<string | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,11 +54,19 @@ export function AppUserProvider({ children }: PropsWithChildren) {
           setErrorMessage(null);
 
           if (!nextUser) {
-            await signInAnonymously(auth);
+            setBootstrapMessage("Signing in anonymously...");
+            await withTimeout(
+              signInAnonymously(auth),
+              "Timed out signing in anonymously.",
+            );
             return;
           }
 
-          const result = await initializeAppUser();
+          setBootstrapMessage("Initializing app profile...");
+          const result = await withTimeout(
+            initializeAppUser(),
+            "Timed out initializing your app profile.",
+          );
           if (!isMounted) return;
 
           setUid(result.data.uid);
@@ -71,6 +93,7 @@ export function AppUserProvider({ children }: PropsWithChildren) {
   return (
     <AppUserContext.Provider
       value={{
+        bootstrapMessage,
         creditBalance,
         errorMessage,
         isBootstrapping,
