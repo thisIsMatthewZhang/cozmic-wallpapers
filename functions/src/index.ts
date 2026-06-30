@@ -20,6 +20,15 @@ const bucket = getStorage().bucket();
 const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 5;
 const ONBOARDING_CREDIT_BALANCE = 12;
+const PUBLIC_CALLABLE_OPTIONS = {
+  region: "us-central1",
+  enforceAppCheck: false,
+  invoker: "public",
+} as const;
+const PUBLIC_HTTP_OPTIONS = {
+  region: "us-central1",
+  invoker: "public",
+} as const;
 const APPLE_APP_ID = defineInt("APPLE_APP_ID");
 const APPLE_BUNDLE_ID = "app.wallpapers.cozmic";
 const APPLE_ROOT_CERTIFICATES = [
@@ -124,7 +133,7 @@ async function createImage(userPrompt: string, { imageConfig = { imageSize: "1K"
 }
 
 export const initializeAppUser = onCall(
-  { region: "us-central1", enforceAppCheck: false },
+  PUBLIC_CALLABLE_OPTIONS,
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) {
@@ -177,7 +186,7 @@ export const initializeAppUser = onCall(
  * Client validation is processed along with prompt checking.
  */
 export const startGenerationJob = onCall(
-  { region: "us-central1", enforceAppCheck: false },
+  PUBLIC_CALLABLE_OPTIONS,
   async (req) => {
     if (!req.auth?.uid) {
       throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
@@ -336,7 +345,7 @@ export const processGenerationJob = onDocumentCreated(
 );
 
 export const verifyAppleIAP = onCall(
-  { region: "us-central1", enforceAppCheck: false },
+  PUBLIC_CALLABLE_OPTIONS,
   async (req) => {
     if (!req.auth) {
       throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
@@ -427,7 +436,7 @@ export const verifyAppleIAP = onCall(
 );
 
 export const appleIAPNotifications = onRequest(
-  { region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       res.set("Allow", "POST").status(405).send("Method not allowed");
@@ -521,7 +530,7 @@ export const appleIAPNotifications = onRequest(
 );
 
 export const prepareAppleIAP = onCall(
-  { region: "us-central1", enforceAppCheck: false },
+  PUBLIC_CALLABLE_OPTIONS,
   async (req) => {
     if (!req.auth) {
       throw new HttpsError("unauthenticated", "A user id was not properly assigned.");
